@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta name="theme-color" content="#16324f"><link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/icon-192.png"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Dashboard - Pro V19</title><style>
+body{font-family:Arial;margin:0;background:#f3f6f8;color:#17212b}.wrap{max-width:1100px;margin:auto;padding:16px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card,.panel{background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 8px #0001}.panel{margin-top:12px}
+.card b{font-size:24px;display:block;margin-top:7px}input,button{padding:10px;border:1px solid #ccd3da;border-radius:8px}button{background:#1769aa;color:white;border:0;margin:4px}
+table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+@media(max-width:700px){.cards{grid-template-columns:1fr 1fr}.tablebox{overflow:auto}}</style></head>
+<body><button id="installAppBtn" onclick="installApp()" style="display:none;position:fixed;right:10px;bottom:10px;z-index:99;padding:10px 14px;background:#f4b942;border:0;border-radius:10px;font-weight:bold">Install Admin App</button><div class="wrap"><h1>Pro V21 Admin Dashboard</h1>
+<div><input id="date" type="date"><button onclick="load()">Load</button><button onclick="logout()">Logout</button></div>
+<div class="cards"><div class="card">Total Logs<b id="logs">0</b></div><div class="card">Employees<b id="emps">0</b></div><div class="card">Shift A<b id="a">0%</b></div><div class="card">Shift B<b id="b">0%</b></div></div>
+<div class="panel"><h3>Shift Summary</h3><div id="shifts"></div></div>
+<div class="panel"><h3>Employee Performance</h3><div class="tablebox"><table><thead><tr><th>Name</th><th>Shift</th><th>Target</th><th>Actual</th><th>%</th><th>Machine</th><th>Job</th></tr></thead><tbody id="body"></tbody></table></div></div>
+<div class="panel"><h3>Add Employee</h3><input id="en" placeholder="Name"><input id="ep" placeholder="WhatsApp Phone"><input id="ec" placeholder="Employee Code"><button onclick="addEmp()">Add</button></div>
+<div class="panel"><h3>WhatsApp Test</h3><button onclick="post('/api/admin/test-reminders')">Send Missing-entry Test</button><button onclick="post('/api/admin/test-summary')">Send Daily Summary Test</button><pre id="out"></pre></div>
+</div><script>
+date.value=new Date().toISOString().slice(0,10);
+async function load(){const r=await fetch('/api/dashboard?date='+date.value),d=await r.json();logs.textContent=d.total_logs;emps.textContent=d.employees.length;
+const sa=d.shifts.find(x=>x.shift==='A'),sb=d.shifts.find(x=>x.shift==='B');a.textContent=(sa?sa.pct:0).toFixed(1)+'%';b.textContent=(sb?sb.pct:0).toFixed(1)+'%';
+shifts.innerHTML=d.shifts.map(x=>`<div><b>Shift ${x.shift}</b> — Employees ${x.employees}, Target ${x.target.toFixed(1)}, Actual ${x.actual}, Production ${x.pct.toFixed(1)}%</div>`).join('');
+body.innerHTML=d.employees.map(x=>`<tr><td>${x.name}</td><td>${x.shift||'-'}</td><td>${x.target.toFixed(1)}</td><td>${x.actual}</td><td>${x.pct.toFixed(1)}%</td><td>${x.machines.join(', ')}</td><td>${x.jobs.join(', ')}</td></tr>`).join('')}
+async function addEmp(){const r=await fetch('/api/employees',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:en.value,phone:ep.value,employee_code:ec.value})});out.textContent=JSON.stringify(await r.json(),null,2)}
+async function post(u){const r=await fetch(u,{method:'POST'});out.textContent=JSON.stringify(await r.json(),null,2)}
+async function logout(){await fetch('/api/admin/logout',{method:'POST'});location='/login.html'}
+(async()=>{const s=await fetch('/api/admin/session').then(r=>r.json());if(!s.admin){location='/login.html';return}load();})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  const b=document.getElementById('installAppBtn'); if(b)b.style.display='inline-block';
+});
+async function installApp(){
+  if(!deferredPrompt){alert('Chrome menu > Add to Home screen / Install app பயன்படுத்தவும்.');return;}
+  deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null;
+}
+</script>
+</body></html>

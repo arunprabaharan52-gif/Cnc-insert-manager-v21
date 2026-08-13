@@ -1,0 +1,16 @@
+{
+  "name": "cnc-insert-manager-pro-v19",
+  "version": "21.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "better-sqlite3": "^11.8.1",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.4.7",
+    "express-session": "^1.18.1",
+    "bcryptjs": "^2.4.3"
+  }
+}

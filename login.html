@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta name="theme-color" content="#16324f"><link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/icon-192.png"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin Login</title>
+<style>body{font-family:Arial;background:#f3f6f8}.box{max-width:360px;margin:80px auto;background:white;padding:22px;border-radius:14px}input,button{width:100%;padding:12px;margin:7px 0;box-sizing:border-box}button{background:#1769aa;color:white;border:0;border-radius:8px}</style></head>
+<body><button id="installAppBtn" onclick="installApp()" style="display:none;position:fixed;right:10px;bottom:10px;z-index:99;padding:10px 14px;background:#f4b942;border:0;border-radius:10px;font-weight:bold">Install App</button><div class="box"><h2>Admin Login</h2><input id="u" placeholder="Username"><input id="p" type="password" placeholder="Password"><button onclick="go()">Login</button><div id="m"></div></div>
+<script>async function go(){const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u.value,password:p.value})});if(r.ok)location='/admin.html';else m.textContent='Invalid login';}</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  const b=document.getElementById('installAppBtn'); if(b)b.style.display='inline-block';
+});
+async function installApp(){
+  if(!deferredPrompt){alert('Chrome menu > Add to Home screen / Install app பயன்படுத்தவும்.');return;}
+  deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null;
+}
+</script>
+</body></html>

@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: cnc-insert-manager-pro-v21
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_PHONE
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_API_VERSION
+        value: v23.0
+      - key: REMINDER_TEMPLATE
+        value: employee_log_reminder
+      - key: ADMIN_MISSING_TEMPLATE
+        value: admin_missing_employee_log
+      - key: DAILY_SUMMARY_TEMPLATE
+        value: daily_production_summary
+      - key: REMINDER_HOUR
+        value: "18"
+      - key: DAILY_SUMMARY_HOUR
+        value: "20"
