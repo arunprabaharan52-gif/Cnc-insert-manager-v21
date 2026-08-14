@@ -1,16 +1,239 @@
 <!DOCTYPE html>
 <html lang="ta">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CNC PRO V23</title>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#15324b">
+<title>CNC PRO V23 Operator</title>
+<link rel="manifest" href="./manifest.json">
 <style>
-body{font-family:Arial,sans-serif;background:#f4f7fb;margin:0;color:#17212b}
-.wrap{max-width:700px;margin:40px auto;padding:20px}
-.card{background:#fff;border:1px solid #dbe3ec;border-radius:16px;padding:20px;margin:14px 0}
-a{display:inline-block;padding:12px 16px;border-radius:10px;background:#0f5f99;color:white;text-decoration:none;font-weight:700}
-small{color:#64748b}
-</style></head>
-<body><div class="wrap"><h1>CNC Insert Manager PRO V23</h1>
-<div class="card"><h2>Admin App</h2><p>Owner / Admin Dashboard</p><a href="./admin/">Open Admin App</a></div>
-<div class="card"><h2>Operator App</h2><p>Daily Operator Report</p><a href="./operator/">Open Operator App</a></div>
-<small>Firebase live sync will be connected in the next step.</small>
-</div></body></html>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#17212b;--muted:#64748b;--primary:#15324b;--good:#087f5b;--bad:#b42318;--line:#dbe3ec}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Tamil",sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--primary);color:#fff;padding:18px 16px}header h1{font-size:22px;margin:0}header small{opacity:.85}
+.container{max-width:950px;margin:auto;padding:16px}.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+input,select,button{font:inherit}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:9px;background:#fff}
+button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{background:var(--good);color:#fff}.primary{background:#0f5f99;color:#fff}
+.notice{padding:10px;border-radius:9px;background:#edf6ff;margin:10px 0}.ok{background:#e9f8f2}.err{background:#fff0f0}
+.insgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(max-width:650px){.formgrid,.insgrid{grid-template-columns:1fr}}
+</style>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
+<script src="./firebase-config.js"></script>
+</head>
+<body>
+<header><h1>CNC Daily Operator Report</h1><small>Employee Daily Entry</small></header>
+<div class="container">
+<div class="card">
+  <div id="status" class="notice">Cloud connection checking...</div>
+  <div id="reportAlert" class="notice">Select your name to check today's report status.</div>
+  <button class="primary" type="button" onclick="enableOperatorAlerts()">Enable Report Reminder</button>
+  <div class="formgrid">
+    <div><label>Date</label><input id="eDate" type="date"></div>
+    <div><label>Operator</label><select id="eOperator"><option value="">Loading...</option></select></div>
+    <div><label>Shift</label><select id="eShift"><option>A</option><option>B</option></select></div>
+    <div><label>In Time</label><input id="eInTime" type="time"></div>
+    <div><label>In AM/PM</label><select id="eInAP"><option>AM</option><option>PM</option></select></div>
+    <div><label>Out Time</label><input id="eOutTime" type="time"></div>
+    <div><label>Out AM/PM</label><select id="eOutAP"><option>AM</option><option>PM</option></select></div>
+    <div><label>Working Hours</label><input id="eHours" readonly></div>
+    <div><label>Machine</label><input id="eMachine" placeholder="Machine No"></div>
+    <div><label>Job / Component</label><input id="eJob" placeholder="Job name"></div>
+    <div><label>Part Number</label><input id="ePartNo" placeholder="Part No"></div>
+    <div><label>Cycle Time (minutes/job)</label><input id="eCycle" type="number" min="0" step="0.01"></div>
+    <div><label>Actual Jobs</label><input id="eActual" type="number" min="0"></div>
+    <div><label>Quality Qty</label><input id="eQuality" type="number" min="0"></div>
+    <div><label>Non-Quality / Rejected Qty</label><input id="eReject" type="number" min="0"></div>
+  </div>
+  <h3>Job Inserts (maximum 6)</h3>
+  <div class="insgrid" id="insertGrid"></div>
+  <div class="notice" id="calc">Target / Operator % / Insert Value automatic.</div>
+  <button class="good" id="sendBtn">Send Daily Report</button>
+</div>
+</div>
+<script>
+let cloudDB=null, master={operators:[],inserts:[],entries:[],stockIn:[]};
+const statusEl=document.getElementById('status');
+const today=()=>{const d=new Date(),z=d.getTimezoneOffset()*60000;return new Date(d-z).toISOString().slice(0,10)};
+eDate.value=today();
+
+function time24(v,ap){
+  if(!v)return '';
+  let [h,m]=v.split(':').map(Number);
+  if(ap==='AM' && h===12)h=0;
+  if(ap==='PM' && h<12)h+=12;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+function hoursBetween(){
+  const a=time24(eInTime.value,eInAP.value),b=time24(eOutTime.value,eOutAP.value);
+  if(!a||!b){eHours.value='';return 0}
+  const mins=t=>{const [h,m]=t.split(':').map(Number);return h*60+m};
+  let d=mins(b)-mins(a); if(d<0)d+=1440;
+  eHours.value=(d/60).toFixed(2); return d/60;
+}
+['eInTime','eInAP','eOutTime','eOutAP'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{hoursBetween();calc()}));
+
+function renderMaster(){
+  eOperator.innerHTML='<option value="">Select Operator</option>'+master.operators.map(o=>`<option value="${o.code}">${o.code} - ${o.name}</option>`).join('');
+  insertGrid.innerHTML='';
+  for(let i=1;i<=6;i++){
+    const wrap=document.createElement('div');
+    wrap.innerHTML=`<label>Insert ${i}</label><select id="ins${i}"><option value="">Select Insert</option>${master.inserts.map(x=>`<option value="${x.code}">${x.name} - ${x.code}</option>`).join('')}</select><label style="margin-top:6px">Insert ${i} Qty</label><input id="qty${i}" type="number" min="0" step="1">`;
+    insertGrid.appendChild(wrap);
+  }
+  for(let i=1;i<=6;i++){document.getElementById('ins'+i).addEventListener('input',calc);document.getElementById('qty'+i).addEventListener('input',calc);}
+}
+eOperator.addEventListener('change',()=>{
+  const op=master.operators.find(x=>x.code===eOperator.value);
+  if(op)eShift.value=op.shift||'A'; operatorReportStatus();
+});
+['eCycle','eActual'].forEach(id=>document.getElementById(id).addEventListener('input',calc));
+
+function calc(){
+  const hrs=hoursBetween(), cycle=+eCycle.value||0, actual=+eActual.value||0;
+  const target=cycle>0?(hrs*60)/cycle:0, pct=target>0?actual/target*100:0;
+  let val=0,qty=0;
+  for(let i=1;i<=6;i++){
+    const code=document.getElementById('ins'+i)?.value||'', q=+document.getElementById('qty'+i)?.value||0;
+    const it=master.inserts.find(x=>x.code===code); qty+=q; if(it)val+=q*(+it.value||0);
+  }
+  calc.innerHTML=`Target: <b>${target.toFixed(1)}</b> &nbsp; Operator: <b>${pct.toFixed(1)}%</b> &nbsp; Total Insert Qty: <b>${qty}</b> &nbsp; Value: <b>₹${val.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>`;
+  return {hrs,target,pct,val,qty};
+}
+
+
+let deadlineSettings={A:'18:00',B:'06:00',BNext:true};
+let lastOperatorNotice='';
+
+function deadlineFor(dateStr,shift){
+  const [y,m,d]=dateStr.split('-').map(Number), tm=(shift==='B'?deadlineSettings.B:deadlineSettings.A)||'00:00';
+  const [hh,mm]=tm.split(':').map(Number), dt=new Date(y,m-1,d,hh,mm,0,0);
+  if(shift==='B' && deadlineSettings.BNext!==false)dt.setDate(dt.getDate()+1);
+  return dt;
+}
+function operatorReportStatus(){
+  const op=master.operators.find(x=>x.code===eOperator.value);
+  if(!op){reportAlert.className='notice';reportAlert.textContent="Select your name to check today's report status.";return;}
+  localStorage.setItem('cnc_operator_code',op.code);
+  const date=eDate.value||today();
+  const submitted=(master.entries||[]).some(e=>e.date===date && e.operatorCode===op.code);
+  const dl=deadlineFor(date,eShift.value), now=new Date();
+  let state=submitted?'SUBMITTED':(now>dl?'LATE':'PENDING');
+  reportAlert.className='notice '+(state==='SUBMITTED'?'ok':state==='LATE'?'err':'');
+  reportAlert.innerHTML=state==='SUBMITTED'
+    ? `<b>SUBMITTED</b> — ${date} report already received.`
+    : `<b>${state}</b> — Report deadline: ${dl.toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true,day:'2-digit',month:'short'})}`;
+  const key=date+'|'+op.code+'|'+state;
+  if(state==='LATE' && Notification.permission==='granted' && key!==lastOperatorNotice){
+    new Notification('Daily Report Pending',{body:`${op.name}, today's CNC Daily Report has not been submitted.`});
+    lastOperatorNotice=key;
+  }
+}
+
+async function registerOperatorFCMToken(){
+  const op=master.operators.find(x=>x.code===eOperator.value);
+  if(!op) throw new Error('Operator select செய்யவும்');
+  if(!window.FIREBASE_VAPID_KEY) throw new Error('VAPID key not configured');
+  const reg=await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+  await navigator.serviceWorker.ready;
+  const messaging=firebase.messaging();
+  const token=await messaging.getToken({vapidKey:window.FIREBASE_VAPID_KEY,serviceWorkerRegistration:reg});
+  if(!token) throw new Error('FCM token not returned');
+  const key=btoa(token).replace(/[.#$\[\]\/]/g,'_').slice(0,120);
+  await cloudDB.ref(`cncManager/fcmTokens/${op.code}/${key}`).set(token);
+  return token;
+}
+
+async function enableOperatorAlerts(){
+  if(!('Notification' in window))return alert('இந்த browser notification support செய்யவில்லை.');
+  const p=await Notification.requestPermission();
+  if(p!=='granted') return alert('Notification permission கிடைக்கவில்லை.');
+  try{
+    await registerOperatorFCMToken();
+    alert('Report reminder + background push enabled.');
+  }catch(e){
+    console.error(e);
+    alert('Browser reminder enabled. FCM setup இன்னும் complete இல்லை: '+e.message);
+  }
+  operatorReportStatus();
+}
+
+async function sendReport(){
+  if(!cloudDB)return alert('Cloud connection இல்லை. Firebase setup check செய்யவும்.');
+  const op=master.operators.find(x=>x.code===eOperator.value);
+  if(!eDate.value||!op)return alert('Date மற்றும் Operator தேர்வு செய்யவும்.');
+  const c=calc(), inserts=[];
+  for(let i=1;i<=6;i++){
+    const code=document.getElementById('ins'+i).value,q=+document.getElementById('qty'+i).value||0;
+    if(code&&q>0){
+      const it=master.inserts.find(x=>x.code===code);
+      inserts.push({code,name:it?.name||'',brand:it?.brand||'',qty:q,unitValue:+it?.value||0,value:q*(+it?.value||0)});
+    }
+  }
+  if(!inserts.length)return alert('குறைந்தது ஒரு Insert மற்றும் Qty கொடுக்கவும்.');
+  const sourceId='OP-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+  const entry={
+    id:Date.now(),sourceId,date:eDate.value,operatorCode:op.code,operatorName:op.name,shift:eShift.value,
+    inTime:time24(eInTime.value,eInAP.value),outTime:time24(eOutTime.value,eOutAP.value),
+    machine:eMachine.value.trim(),job:eJob.value.trim(),partNo:ePartNo.value.trim(),
+    cycle:+eCycle.value||0,hours:c.hrs,target:c.target,actual:+eActual.value||0,percentage:c.pct,
+    inserts,insertCode:inserts[0].code,insertName:inserts[0].name,qty:c.qty,unitValue:inserts[0].unitValue,value:c.val,
+    quality:+eQuality.value||0,reject:+eReject.value||0,submittedAt:new Date().toISOString()
+  };
+  sendBtn.disabled=true; sendBtn.textContent='Sending...';
+  try{
+    await cloudDB.ref('cncManager/operatorSubmissions').push(entry);
+    statusEl.className='notice ok';statusEl.textContent='Report sent successfully. Admin Dashboard-ல் சேர்க்கப்பட்டது.';
+    ['eMachine','eJob','ePartNo','eCycle','eActual','eQuality','eReject'].forEach(id=>document.getElementById(id).value='');
+    for(let i=1;i<=6;i++){document.getElementById('ins'+i).value='';document.getElementById('qty'+i).value='';}
+    calc();
+  }catch(e){statusEl.className='notice err';statusEl.textContent='Send failed: '+e.message}
+  finally{sendBtn.disabled=false;sendBtn.textContent='Send Daily Report';}
+}
+sendBtn.addEventListener('click',sendReport);
+eDate.addEventListener('change',operatorReportStatus);
+eShift.addEventListener('change',operatorReportStatus);
+setInterval(operatorReportStatus,60000);
+
+if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey){
+  try{
+    if(!firebase.apps.length)firebase.initializeApp(window.FIREBASE_CONFIG);
+    cloudDB=firebase.database();
+    cloudDB.ref('cncManager/settings/reportDeadlines').on('value',s=>{
+      if(s.exists()){deadlineSettings=s.val();operatorReportStatus();}
+    });
+    cloudDB.ref('cncManager/db').on('value',s=>{
+      if(s.exists()){
+        master=s.val();renderMaster();
+        const saved=localStorage.getItem('cnc_operator_code');
+        if(saved && [...eOperator.options].some(x=>x.value===saved)){eOperator.value=saved;const op=master.operators.find(x=>x.code===saved);if(op)eShift.value=op.shift||'A';}
+        statusEl.className='notice ok';statusEl.textContent='Cloud LIVE — report ready';
+        operatorReportStatus();
+      }
+      else{statusEl.textContent='Admin master data இன்னும் upload ஆகவில்லை.'}
+    },e=>{statusEl.className='notice err';statusEl.textContent='Cloud permission/error';});
+  }catch(e){statusEl.className='notice err';statusEl.textContent='Firebase setup error';}
+}else{
+  statusEl.className='notice err';statusEl.textContent='Firebase config இன்னும் சேர்க்கவில்லை.';
+}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js').catch(()=>{});}
+</script>
+<script>
+(function(){
+  try{
+    if(window.firebase && firebase.messaging){
+      const m=firebase.messaging();
+      m.onMessage(payload=>{
+        const n=payload.notification||{};
+        if(Notification.permission==='granted'){
+          new Notification(n.title||'Daily Report Alert',{body:n.body||'New notification'});
+        }
+      });
+    }
+  }catch(e){console.warn('Operator foreground messaging init',e)}
+})();
+</script>
+</body>
+</html>
