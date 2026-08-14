@@ -648,20 +648,6 @@ dashDate.value=eDate.value=stockDate.value=today();eInPeriod.value='AM';eOutPeri
 })();
 </script>
 
-<script>
-(function(){
-  try{
-    if(window.firebase && firebase.messaging){
-      const m=firebase.messaging();
-      m.onMessage(payload=>{
-        const n=payload.notification||{};
-        if(Notification.permission==='granted'){
-          new Notification(n.title||'CNC Alert',{body:n.body||'New notification'});
-        }
-      });
-    }
-  }catch(e){console.warn('Admin foreground messaging init',e)}
-})();
-</script>
+
 </body>
 </html>
