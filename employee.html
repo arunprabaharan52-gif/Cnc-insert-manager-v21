@@ -1,37 +1,21 @@
-<!doctype html><html><head><meta name="theme-color" content="#16324f"><link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/icon-192.png"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Employee Entry - Pro V21</title><style>
-body{font-family:Arial;margin:0;background:#f4f6f8;color:#18212a}.wrap{max-width:720px;margin:auto;padding:16px}.card{background:#fff;padding:16px;border-radius:14px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}input,select,button{padding:12px;border:1px solid #ccd3da;border-radius:9px;width:100%;box-sizing:border-box}
-button{background:#1769aa;color:#fff;border:0;font-weight:bold}.ins{margin-top:12px;padding-top:12px;border-top:1px solid #eee}.ok{background:#ecfdf3;padding:10px;border-radius:8px;margin-top:10px}.err{background:#fff1f0;padding:10px;border-radius:8px;margin-top:10px}
-@media(max-width:600px){.grid{grid-template-columns:1fr}}</style></head>
-<body><button id="installAppBtn" onclick="installApp()" style="display:none;position:fixed;right:10px;bottom:10px;z-index:99;padding:10px 14px;background:#f4b942;border:0;border-radius:10px;font-weight:bold">Install Employee App</button><div class="wrap"><h2>Employee Daily Entry</h2><div class="card">
-<div class="grid">
-<input id="date" type="date"><input id="ecode" placeholder="Employee Code">
-<select id="shift"><option value="">Shift</option><option>A</option><option>B</option><option>C</option></select>
-<input id="machine" placeholder="Machine"><input id="job" placeholder="Job Name">
-<input id="cycle" type="number" step="0.01" placeholder="Cycle Time (min/job)"><input id="hours" type="number" step="0.01" value="7" placeholder="Shift Hours">
-<input id="actual" type="number" placeholder="Actual Jobs"><input id="company" placeholder="Company">
-</div><div id="inserts"></div><button onclick="submitLog()" style="margin-top:14px">Submit Daily Entry</button><div id="msg"></div>
-</div></div><script>
-date.value=new Date().toISOString().slice(0,10);
-const box=document.getElementById('inserts');for(let i=1;i<=6;i++)box.innerHTML+=`<div class="ins"><b>Insert ${i}</b><div class="grid"><input id="ic${i}" placeholder="Insert Code"><input id="iq${i}" type="number" placeholder="Used Qty"><input id="ij${i}" type="number" placeholder="Jobs Run"></div></div>`;
-async function submitLog(){
- const inserts=[];for(let i=1;i<=6;i++){const code=document.getElementById('ic'+i).value.trim(),qty=+document.getElementById('iq'+i).value||0,jobs=+document.getElementById('ij'+i).value||0;if(code&&(qty||jobs))inserts.push({code,qty,jobs})}
- const payload={log_date:date.value,employee_code:ecode.value.trim(),shift:shift.value,machine:machine.value.trim(),job_name:job.value.trim(),cycle_time:+cycle.value||0,shift_hours:+hours.value||7,actual_jobs:+actual.value||0,company:company.value.trim(),inserts};
- const r=await fetch('/api/logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),d=await r.json();
- msg.className=r.ok?'ok':'err';msg.textContent=r.ok?`Entry submitted - ${d.employee_name}`:(d.error||'Error');
-}
-</script>
-<script>
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault(); deferredPrompt=e;
-  const b=document.getElementById('installAppBtn'); if(b)b.style.display='inline-block';
-});
-async function installApp(){
-  if(!deferredPrompt){alert('Chrome menu > Add to Home screen / Install app பயன்படுத்தவும்.');return;}
-  deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null;
-}
-</script>
-</body></html>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="./manifest.json"><title>Employee Entry - Pro V23A</title><style>
+:root{--blue:#1769aa;--ink:#17212b;--bg:#f3f6f8;--ok:#ecfdf3;--err:#fff1f0}
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+a{color:var(--blue)}button{cursor:pointer}.wrap{max-width:1100px;margin:auto;padding:16px}
+.card,.panel{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 8px #0001;margin-top:12px}
+input,select,button{padding:11px;border:1px solid #ccd3da;border-radius:9px}button{background:var(--blue);color:#fff;border:0;font-weight:bold}
+.ok{background:var(--ok);padding:10px;border-radius:8px;margin-top:10px}.err{background:var(--err);padding:10px;border-radius:8px;margin-top:10px}.muted{color:#667085;font-size:14px}
+.wrap{max-width:760px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}input,select,button{width:100%}.ins{margin-top:12px;padding-top:12px;border-top:1px solid #eee}@media(max-width:600px){.grid{grid-template-columns:1fr}}</style></head><body><div class="wrap"><h2>Employee Daily Entry</h2><div class="card"><div class="grid"><input id="date" type="date"><input id="ecode" placeholder="Employee Code"><select id="shift"><option value="">Shift</option><option>A</option><option>B</option><option>C</option></select><input id="machine" placeholder="Machine"><input id="job" placeholder="Job Name"><input id="cycle" type="number" step="0.01" placeholder="Cycle Time (min/job)"><input id="hours" type="number" step="0.01" value="7" placeholder="Shift Hours"><input id="actual" type="number" placeholder="Actual Jobs"><input id="company" placeholder="Company"></div><div id="inserts"></div><button onclick="submitLog()" style="margin-top:14px">Submit Daily Entry</button><div id="msg"></div><p><a href="./index.html">← Home</a></p></div></div><script>
+const DBKEY='cnc_v23a_db';
+function dbLoad(){try{return JSON.parse(localStorage.getItem(DBKEY))||{employees:[],logs:[],settings:{username:'admin',password:'1234'}}}catch(e){return {employees:[],logs:[],settings:{username:'admin',password:'1234'}}}}
+function dbSave(db){localStorage.setItem(DBKEY,JSON.stringify(db))}
+function clean(v){return String(v||'').trim()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function todayLocal(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
+function requireAdmin(){if(sessionStorage.getItem('cnc_v23a_admin')!=='1'){location='./login.html';return false}return true}
+
+date.value=todayLocal();
+for(let i=1;i<=6;i++)inserts.innerHTML+=`<div class="ins"><b>Insert ${i}</b><div class="grid"><input id="ic${i}" placeholder="Insert Code"><input id="iq${i}" type="number" placeholder="Used Qty"><input id="ij${i}" type="number" placeholder="Jobs Run"></div></div>`;
+function submitLog(){const db=dbLoad(),code=clean(ecode.value),emp=db.employees.find(e=>e.employee_code===code&&e.active!==false);if(!date.value||!code||!clean(machine.value))return show('Date, Employee Code, Machine required',false);if(!emp)return show('Invalid employee code. Admin முதலில் employee add செய்ய வேண்டும்.',false);const ins=[];for(let i=1;i<=6;i++){const c=clean(document.getElementById('ic'+i).value),q=+document.getElementById('iq'+i).value||0,j=+document.getElementById('ij'+i).value||0;if(c&&(q||j))ins.push({code:c,qty:q,jobs:j})}db.logs.push({id:Date.now(),log_date:date.value,employee_name:emp.name,employee_phone:emp.phone,employee_code:emp.employee_code,shift:shift.value,machine:clean(machine.value),job_name:clean(job.value),cycle_time:+cycle.value||0,shift_hours:+hours.value||7,actual_jobs:+actual.value||0,company:clean(company.value),inserts:ins,created_at:new Date().toISOString()});dbSave(db);show(`Entry saved - ${emp.name}`,true)}
+function show(t,ok){msg.className=ok?'ok':'err';msg.textContent=t}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});</script></body></html>

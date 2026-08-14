@@ -1,38 +1,29 @@
-<!doctype html><html><head><meta name="theme-color" content="#16324f"><link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/icon-192.png"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin Dashboard - Pro V19</title><style>
-body{font-family:Arial;margin:0;background:#f3f6f8;color:#17212b}.wrap{max-width:1100px;margin:auto;padding:16px}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card,.panel{background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 8px #0001}.panel{margin-top:12px}
-.card b{font-size:24px;display:block;margin-top:7px}input,button{padding:10px;border:1px solid #ccd3da;border-radius:8px}button{background:#1769aa;color:white;border:0;margin:4px}
-table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-@media(max-width:700px){.cards{grid-template-columns:1fr 1fr}.tablebox{overflow:auto}}</style></head>
-<body><button id="installAppBtn" onclick="installApp()" style="display:none;position:fixed;right:10px;bottom:10px;z-index:99;padding:10px 14px;background:#f4b942;border:0;border-radius:10px;font-weight:bold">Install Admin App</button><div class="wrap"><h1>Pro V21 Admin Dashboard</h1>
-<div><input id="date" type="date"><button onclick="load()">Load</button><button onclick="logout()">Logout</button></div>
-<div class="cards"><div class="card">Total Logs<b id="logs">0</b></div><div class="card">Employees<b id="emps">0</b></div><div class="card">Shift A<b id="a">0%</b></div><div class="card">Shift B<b id="b">0%</b></div></div>
-<div class="panel"><h3>Shift Summary</h3><div id="shifts"></div></div>
-<div class="panel"><h3>Employee Performance</h3><div class="tablebox"><table><thead><tr><th>Name</th><th>Shift</th><th>Target</th><th>Actual</th><th>%</th><th>Machine</th><th>Job</th></tr></thead><tbody id="body"></tbody></table></div></div>
-<div class="panel"><h3>Add Employee</h3><input id="en" placeholder="Name"><input id="ep" placeholder="WhatsApp Phone"><input id="ec" placeholder="Employee Code"><button onclick="addEmp()">Add</button></div>
-<div class="panel"><h3>WhatsApp Test</h3><button onclick="post('/api/admin/test-reminders')">Send Missing-entry Test</button><button onclick="post('/api/admin/test-summary')">Send Daily Summary Test</button><pre id="out"></pre></div>
-</div><script>
-date.value=new Date().toISOString().slice(0,10);
-async function load(){const r=await fetch('/api/dashboard?date='+date.value),d=await r.json();logs.textContent=d.total_logs;emps.textContent=d.employees.length;
-const sa=d.shifts.find(x=>x.shift==='A'),sb=d.shifts.find(x=>x.shift==='B');a.textContent=(sa?sa.pct:0).toFixed(1)+'%';b.textContent=(sb?sb.pct:0).toFixed(1)+'%';
-shifts.innerHTML=d.shifts.map(x=>`<div><b>Shift ${x.shift}</b> — Employees ${x.employees}, Target ${x.target.toFixed(1)}, Actual ${x.actual}, Production ${x.pct.toFixed(1)}%</div>`).join('');
-body.innerHTML=d.employees.map(x=>`<tr><td>${x.name}</td><td>${x.shift||'-'}</td><td>${x.target.toFixed(1)}</td><td>${x.actual}</td><td>${x.pct.toFixed(1)}%</td><td>${x.machines.join(', ')}</td><td>${x.jobs.join(', ')}</td></tr>`).join('')}
-async function addEmp(){const r=await fetch('/api/employees',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:en.value,phone:ep.value,employee_code:ec.value})});out.textContent=JSON.stringify(await r.json(),null,2)}
-async function post(u){const r=await fetch(u,{method:'POST'});out.textContent=JSON.stringify(await r.json(),null,2)}
-async function logout(){await fetch('/api/admin/logout',{method:'POST'});location='/login.html'}
-(async()=>{const s=await fetch('/api/admin/session').then(r=>r.json());if(!s.admin){location='/login.html';return}load();})();
-</script>
-<script>
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault(); deferredPrompt=e;
-  const b=document.getElementById('installAppBtn'); if(b)b.style.display='inline-block';
-});
-async function installApp(){
-  if(!deferredPrompt){alert('Chrome menu > Add to Home screen / Install app பயன்படுத்தவும்.');return;}
-  deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null;
-}
-</script>
-</body></html>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="./manifest.json"><title>Admin Dashboard - Pro V23A</title><style>
+:root{--blue:#1769aa;--ink:#17212b;--bg:#f3f6f8;--ok:#ecfdf3;--err:#fff1f0}
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+a{color:var(--blue)}button{cursor:pointer}.wrap{max-width:1100px;margin:auto;padding:16px}
+.card,.panel{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 8px #0001;margin-top:12px}
+input,select,button{padding:11px;border:1px solid #ccd3da;border-radius:9px}button{background:var(--blue);color:#fff;border:0;font-weight:bold}
+.ok{background:var(--ok);padding:10px;border-radius:8px;margin-top:10px}.err{background:var(--err);padding:10px;border-radius:8px;margin-top:10px}.muted{color:#667085;font-size:14px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card b{font-size:24px;display:block;margin-top:7px}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}.tablebox{overflow:auto}.row{display:flex;gap:8px;flex-wrap:wrap}.danger{background:#b42318}@media(max-width:700px){.cards{grid-template-columns:1fr 1fr}}</style></head><body><div class="wrap"><h1>Pro V23A Admin Dashboard</h1><div class="row"><input id="date" type="date"><button onclick="loadDash()">Load</button><button onclick="logout()">Logout</button></div><div class="cards"><div class="card">Total Logs<b id="logs">0</b></div><div class="card">Employees<b id="emps">0</b></div><div class="card">Shift A<b id="a">0%</b></div><div class="card">Shift B<b id="b">0%</b></div></div><div class="panel"><h3>Shift Summary</h3><div id="shifts"></div></div><div class="panel"><h3>Employee Performance</h3><div class="tablebox"><table><thead><tr><th>Name</th><th>Code</th><th>Shift</th><th>Target</th><th>Actual</th><th>%</th><th>Machine</th><th>Job</th></tr></thead><tbody id="body"></tbody></table></div></div><div class="panel"><h3>Add Employee</h3><div class="row"><input id="en" placeholder="Name"><input id="ep" placeholder="Phone"><input id="ec" placeholder="Employee Code"><button onclick="addEmp()">Add</button></div><div id="out"></div><div id="elist"></div></div><div class="panel"><h3>Backup / Restore</h3><button onclick="exportData()">Download JSON Backup</button><input id="importFile" type="file" accept="application/json"><button onclick="importData()">Import Backup</button></div><div class="panel"><h3>Change Admin Login</h3><div class="row"><input id="nu" placeholder="New username"><input id="np" type="password" placeholder="New password"><button onclick="changeLogin()">Save Login</button></div></div><div class="panel"><h3>Clear Data</h3><button class="danger" onclick="clearLogs()">Clear All Logs</button></div></div><script>
+const DBKEY='cnc_v23a_db';
+function dbLoad(){try{return JSON.parse(localStorage.getItem(DBKEY))||{employees:[],logs:[],settings:{username:'admin',password:'1234'}}}catch(e){return {employees:[],logs:[],settings:{username:'admin',password:'1234'}}}}
+function dbSave(db){localStorage.setItem(DBKEY,JSON.stringify(db))}
+function clean(v){return String(v||'').trim()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function todayLocal(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
+function requireAdmin(){if(sessionStorage.getItem('cnc_v23a_admin')!=='1'){location='./login.html';return false}return true}
+
+if(!requireAdmin())throw new Error('redirect');date.value=todayLocal();
+function target(r){const c=+r.cycle_time||0,h=+r.shift_hours||0;return c>0?(60/c)*h:0}function pct(a,t){return t>0?a/t*100:0}
+function loadDash(){const db=dbLoad(),rows=db.logs.filter(r=>r.log_date===date.value),S={},E={};for(const r of rows){const t=target(r),act=+r.actual_jobs||0,s=(r.shift||'OTHER').toUpperCase();S[s]??={target:0,actual:0,employees:new Set()};S[s].target+=t;S[s].actual+=act;S[s].employees.add(r.employee_code);const k=r.employee_code||r.employee_name;E[k]??={name:r.employee_name,code:r.employee_code,shift:r.shift,target:0,actual:0,machines:new Set(),jobs:new Set()};E[k].target+=t;E[k].actual+=act;if(r.machine)E[k].machines.add(r.machine);if(r.job_name)E[k].jobs.add(r.job_name)}logs.textContent=rows.length;emps.textContent=db.employees.filter(e=>e.active!==false).length;a.textContent=pct(S.A?.actual||0,S.A?.target||0).toFixed(1)+'%';b.textContent=pct(S.B?.actual||0,S.B?.target||0).toFixed(1)+'%';shifts.innerHTML=Object.entries(S).map(([s,x])=>`<div><b>Shift ${esc(s)}</b> — Employees ${x.employees.size}, Target ${x.target.toFixed(1)}, Actual ${x.actual}, Production ${pct(x.actual,x.target).toFixed(1)}%</div>`).join('')||'<span class="muted">No data</span>';body.innerHTML=Object.values(E).map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.code)}</td><td>${esc(x.shift||'-')}</td><td>${x.target.toFixed(1)}</td><td>${x.actual}</td><td>${pct(x.actual,x.target).toFixed(1)}%</td><td>${esc([...x.machines].join(', '))}</td><td>${esc([...x.jobs].join(', '))}</td></tr>`).join('');renderEmployees()}
+function addEmp(){const db=dbLoad(),name=clean(en.value),phone=clean(ep.value),code=clean(ec.value);if(!name||!phone||!code)return say('Name, Phone, Employee Code required',false);if(db.employees.some(e=>e.employee_code===code))return say('Employee Code already exists',false);db.employees.push({id:Date.now(),name,phone,employee_code:code,active:true});dbSave(db);en.value=ep.value=ec.value='';say('Employee added',true);loadDash()}
+function renderEmployees(){const db=dbLoad();elist.innerHTML='<h4>Employees</h4>'+db.employees.map(e=>`<div>${esc(e.name)} (${esc(e.employee_code)}) <button class="danger" onclick="removeEmp(${e.id})">Remove</button></div>`).join('')}
+function removeEmp(id){if(!confirm('Remove employee?'))return;const db=dbLoad();db.employees=db.employees.filter(e=>e.id!==id);dbSave(db);loadDash()}
+function say(t,ok){out.className=ok?'ok':'err';out.textContent=t}
+function exportData(){const blob=new Blob([JSON.stringify(dbLoad(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='cnc-insert-manager-backup-'+todayLocal()+'.json';a.click();URL.revokeObjectURL(a.href)}
+function importData(){const f=importFile.files[0];if(!f)return alert('JSON backup file தேர்வு செய்யுங்கள்');const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!Array.isArray(d.employees)||!Array.isArray(d.logs))throw 0;dbSave(d);alert('Backup imported');loadDash()}catch(e){alert('Invalid backup file')}};rd.readAsText(f)}
+function changeLogin(){const db=dbLoad(),u=clean(nu.value),p=np.value;if(!u||p.length<4)return alert('Username மற்றும் குறைந்தது 4-character password கொடுக்கவும்');db.settings={username:u,password:p};dbSave(db);nu.value=np.value='';alert('Admin login changed')}
+function clearLogs(){if(!confirm('All logs delete செய்யவா?'))return;const db=dbLoad();db.logs=[];dbSave(db);loadDash()}
+function logout(){sessionStorage.removeItem('cnc_v23a_admin');location='./login.html'}
+loadDash();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});</script></body></html>
