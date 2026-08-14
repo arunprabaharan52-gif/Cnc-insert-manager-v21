@@ -1,0 +1,11 @@
+{
+  "id": "./operator-app",
+  "name": "CNC PRO V23 Operator",
+  "short_name": "CNC Operator",
+  "description": "CNC Insert Manager PRO V23 - Operator Daily Report",
+  "start_url": "./operator.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#15324b"
+}
