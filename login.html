@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="./manifest.json"><title>Admin Login</title><style>
+<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="./manifest.json"><title>Admin Login</title><style>
 :root{--blue:#1769aa;--ink:#17212b;--bg:#f3f6f8;--ok:#ecfdf3;--err:#fff1f0}
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
 a{color:var(--blue)}button{cursor:pointer}.wrap{max-width:1100px;margin:auto;padding:16px}
@@ -15,4 +15,4 @@ function todayLocal(){const d=new Date();const y=d.getFullYear(),m=String(d.getM
 function requireAdmin(){if(sessionStorage.getItem('cnc_v23a_admin')!=='1'){location='./login.html';return false}return true}
 
 function go(){const db=dbLoad();if(clean(u.value)===db.settings.username && p.value===db.settings.password){sessionStorage.setItem('cnc_v23a_admin','1');location='./admin.html'}else{m.className='err';m.textContent='Invalid login'}}
-p.addEventListener('keydown',e=>{if(e.key==='Enter')go()});</script></body></html>
+p.addEventListener('keydown',e=>{if(e.key==='Enter')go()});if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=23a-20260814-r2',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});}</script></body></html>

@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="./manifest.json"><title>Admin Dashboard - Pro V23A</title><style>
+<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="./manifest.json"><title>Admin Dashboard - Pro V23A</title><style>
 :root{--blue:#1769aa;--ink:#17212b;--bg:#f3f6f8;--ok:#ecfdf3;--err:#fff1f0}
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
 a{color:var(--blue)}button{cursor:pointer}.wrap{max-width:1100px;margin:auto;padding:16px}
@@ -26,4 +26,4 @@ function importData(){const f=importFile.files[0];if(!f)return alert('JSON backu
 function changeLogin(){const db=dbLoad(),u=clean(nu.value),p=np.value;if(!u||p.length<4)return alert('Username மற்றும் குறைந்தது 4-character password கொடுக்கவும்');db.settings={username:u,password:p};dbSave(db);nu.value=np.value='';alert('Admin login changed')}
 function clearLogs(){if(!confirm('All logs delete செய்யவா?'))return;const db=dbLoad();db.logs=[];dbSave(db);loadDash()}
 function logout(){sessionStorage.removeItem('cnc_v23a_admin');location='./login.html'}
-loadDash();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});</script></body></html>
+loadDash();if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=23a-20260814-r2',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});}</script></body></html>
