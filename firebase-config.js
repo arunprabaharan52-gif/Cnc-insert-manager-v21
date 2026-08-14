@@ -4,7 +4,7 @@
   apgglobalThis.FIREBASE_CONFIG = {
   apiKey: "AIzaSyAWivg-wJ7J5v6eanlI5H-3Paw-EzOuCE8",
   authDomain: "cnc-insert-manager.firebaseapp.com",
-  databaseURL: "",
+  databaseURL: "cnc-insert-manager-default-rtdb.firebaseio.com",,
   projectId: "cnc-insert-manager",
   storageBucket: "cnc-insert-manager.firebasestorage.app",
   messagingSenderId: "921839032080",
