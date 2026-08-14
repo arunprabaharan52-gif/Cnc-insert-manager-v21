@@ -1,16 +1,667 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ta">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pro V23A Admin</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#15324b">
+<title>CNC PRO V23 Admin</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#17212b;--muted:#64748b;--primary:#15324b;--good:#087f5b;--warn:#b26a00;--bad:#b42318;--line:#dbe3ec}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Tamil",sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--primary);color:#fff;padding:18px 16px;position:sticky;top:0;z-index:5}
+header h1{font-size:22px;margin:0}header small{opacity:.85}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+button,.btn,input,select{font:inherit}button,.btn{border:0;border-radius:9px;padding:10px 13px;background:#e8eef5;cursor:pointer}
+button.primary,.btn.primary{background:#0f5f99;color:#fff}button.good{background:var(--good);color:#fff}button.danger{background:var(--bad);color:#fff}
+.container{max-width:1180px;margin:auto;padding:16px}.page{display:none}.page.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.kpi b{font-size:26px;display:block;margin-top:6px}.kpi small{color:var(--muted)}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:9px;background:#fff}
+.formgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:9px;border-bottom:1px solid #e5e7eb;text-align:left;white-space:nowrap}
+th{background:#f8fafc}.tablebox{overflow:auto}.goodtxt{color:var(--good);font-weight:700}.badtxt{color:var(--bad);font-weight:700}.warntxt{color:var(--warn);font-weight:700}
+.notice{padding:10px;border-radius:9px;background:#edf6ff;margin:10px 0}.muted{color:var(--muted)}
+h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
+@media(max-width:850px){.grid,.formgrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.grid,.grid2,.formgrid{grid-template-columns:1fr}header{position:static}table{font-size:12px}}
+@media print{header,nav,.actions,.no-print{display:none!important}.page{display:none!important}#dashboard.page{display:block!important}.card{box-shadow:none}}
+.alert-good{background:#e9f8f2;color:#087f5b;font-weight:700}
+.alert-warn{background:#fff7e6;color:#9a5b00;font-weight:700}
+.alert-bad{background:#fff0f0;color:#b42318;font-weight:700}
+.alert-pill{display:inline-block;padding:5px 8px;border-radius:999px;font-size:12px}
+</style>
 
-  <script>
-    window.location.replace("./index.html");
-  </script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
+<script src="./firebase-config.js"></script>
+<link rel="manifest" href="./manifest.json">
+
 </head>
-
 <body>
-  <p>Opening Pro V23A Admin Dashboard...</p>
+<header>
+  <h1>CNC Insert Manager PRO V23</h1>
+  <small>Complete Chrome / GitHub Pages Edition</small>
+  <nav>
+    <button onclick="showPage('dashboard')">Dashboard</button>
+    <button onclick="showPage('entry')">Daily Entry</button>
+    <button onclick="showPage('operators')">Operators</button>
+    <button onclick="showPage('inserts')">Insert Master / Stock</button>
+    <button onclick="showPage('messages')">Messages / Photos</button>
+    <button onclick="showPage('backup')">Backup</button>
+  </nav>
+</header>
+
+<div class="container">
+<section id="dashboard" class="page active">
+  <div class="actions no-print">
+    <input id="dashDate" type="date" style="max-width:180px">
+    <button class="primary" onclick="renderDashboard()">Load Date</button>
+    <button onclick="window.print()">Print</button>
+  </div>
+  <div class="grid" id="kpis"></div>
+
+  <h3 class="sectiontitle">Shift Performance</h3>
+  <div class="grid2">
+    <div class="card"><h3>Shift A</h3><div id="shiftA"></div></div>
+    <div class="card"><h3>Shift B</h3><div id="shiftB"></div></div>
+  </div>
+
+  <h3 class="sectiontitle">Daily Report Alerts</h3>
+  <div class="card">
+    <div class="formgrid no-print">
+      <div><label>Shift A Deadline</label><input id="deadlineA" type="time" value="18:00"></div>
+      <div><label>Shift B Deadline</label><input id="deadlineB" type="time" value="06:00"></div>
+      <div><label>Shift B Deadline Day</label><select id="deadlineBNext"><option value="1">Next Day</option><option value="0">Same Day</option></select></div>
+      <div><label>Browser Alerts</label><button class="primary" onclick="enableAdminAlerts()">Enable Alerts</button></div>
+    </div>
+    <div class="actions no-print"><button onclick="saveDeadlineSettings()">Save Deadline Settings</button></div>
+    <div id="reportAlertSummary" class="notice">Checking operator reports...</div>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>Operator</th><th>Code</th><th>Shift</th><th>Deadline</th><th>Status</th></tr></thead>
+        <tbody id="reportAlertRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <h3 class="sectiontitle">Operator Percentage</h3>
+  <div class="card tablebox">
+    <table><thead><tr><th>Operator</th><th>Code</th><th>Shift</th><th>Target</th><th>Actual Jobs</th><th>Percentage</th><th>Insert Qty</th><th>Insert Value</th></tr></thead><tbody id="operatorPerf"></tbody></table>
+  </div>
+
+  <h3 class="sectiontitle">Monthly Operator Performance Chart</h3>
+  <div class="card">
+    <div class="formgrid no-print" style="margin-bottom:12px">
+      <div><label>Team / Shift</label><select id="perfShift" onchange="renderMonthlyPerformance()"><option value="ALL">All</option><option value="A">Shift A</option><option value="B">Shift B</option></select></div>
+      <div><label>Operator</label><select id="perfOperator" onchange="renderMonthlyPerformance()"></select></div>
+      <div><label>Months</label><select id="perfMonths" onchange="renderMonthlyPerformance()"><option value="6">Last 6 Months</option><option value="12">Last 12 Months</option></select></div>
+    </div>
+    <div id="perfCompare" class="notice">Select an operator to view monthly performance.</div>
+    <div style="overflow:auto"><canvas id="perfChart" width="1000" height="360" style="width:100%;min-width:700px;max-height:360px"></canvas></div>
+  </div>
+
+  <h3 class="sectiontitle">Insert Summary</h3>
+  <div class="card tablebox">
+    <table><thead><tr><th>Insert</th><th>Today Used</th><th>Today Used Value</th><th>Remaining Stock</th><th>Remaining Total Value</th><th>Status</th></tr></thead><tbody id="insertSummary"></tbody></table>
+  </div>
+</section>
+
+<section id="entry" class="page">
+  <div class="card">
+    <h2>Daily Operator / Insert Entry</h2>
+    <div class="formgrid">
+      <div><label>Date</label><input id="eDate" type="date"></div>
+      <div><label>Operator</label><select id="eOperator"></select></div>
+      <div><label>Shift</label><select id="eShift"><option>A</option><option>B</option></select></div>
+      <div><label>Machine</label><input id="eMachine" placeholder="Machine No"></div>
+      <div><label>Job / Component</label><input id="eJob" placeholder="Job name"></div>
+      <div><label>Part Number</label><input id="ePartNo" placeholder="Part No"></div>
+      <div><label>Cycle Time (minutes/job)</label><input id="eCycle" type="number" min="0" step="0.01"></div>
+      <div><label>In Time</label><div style="display:flex;gap:6px"><input id="eIn" type="text" inputmode="numeric" placeholder="08:00" maxlength="5"><select id="eInPeriod" style="max-width:90px"><option>AM</option><option>PM</option></select></div></div>
+      <div><label>Out Time</label><div style="display:flex;gap:6px"><input id="eOut" type="text" inputmode="numeric" placeholder="05:00" maxlength="5"><select id="eOutPeriod" style="max-width:90px"><option>AM</option><option>PM</option></select></div></div>
+      <div><label>Working Hours (Auto)</label><input id="eHours" type="number" step="0.01" readonly></div>
+      <div><label>Actual Jobs</label><input id="eActual" type="number" min="0"></div>
+      <div><label>Insert 1</label><select id="eInsert1"></select></div>
+      <div><label>Insert 1 Qty</label><input id="eQty1" type="number" min="0" step="1"></div>
+      <div><label>Insert 2</label><select id="eInsert2"></select></div>
+      <div><label>Insert 2 Qty</label><input id="eQty2" type="number" min="0" step="1"></div>
+      <div><label>Insert 3</label><select id="eInsert3"></select></div>
+      <div><label>Insert 3 Qty</label><input id="eQty3" type="number" min="0" step="1"></div>
+      <div><label>Insert 4</label><select id="eInsert4"></select></div>
+      <div><label>Insert 4 Qty</label><input id="eQty4" type="number" min="0" step="1"></div>
+      <div><label>Insert 5</label><select id="eInsert5"></select></div>
+      <div><label>Insert 5 Qty</label><input id="eQty5" type="number" min="0" step="1"></div>
+      <div><label>Insert 6</label><select id="eInsert6"></select></div>
+      <div><label>Insert 6 Qty</label><input id="eQty6" type="number" min="0" step="1"></div>
+      <div><label>Quality Insert Qty</label><input id="eQuality" type="number" min="0" step="1"></div>
+      <div><label>Non-Quality / Rejected Qty</label><input id="eReject" type="number" min="0" step="1"></div>
+    </div>
+    <div class="notice" id="entryCalc">Target / Operator % / Insert Value will calculate automatically.</div>
+    <div class="actions"><button class="good" onclick="saveEntry()">Save Entry</button><button onclick="clearEntry()">Clear</button></div>
+  </div>
+
+  <h3 class="sectiontitle">Saved Entries</h3>
+  <div class="card tablebox">
+    <table><thead><tr><th>Date</th><th>Operator</th><th>Shift</th><th>In</th><th>Out</th><th>Hours</th><th>Machine</th><th>Job</th><th>Part Number</th><th>Target</th><th>Actual</th><th>%</th><th>Insert 1</th><th>Insert 2</th><th>Insert 3</th><th>Insert 4</th><th>Insert 5</th><th>Insert 6</th><th>Total Value</th><th>Quality</th><th>Non-Quality</th><th></th></tr></thead><tbody id="entryRows"></tbody></table>
+  </div>
+</section>
+
+<section id="operators" class="page">
+  <div class="card">
+    <h2>Operator Master</h2>
+    <div class="formgrid">
+      <div><label>Employee Code</label><input id="opCode"></div>
+      <div><label>Operator Name</label><input id="opName"></div>
+      <div><label>Default Shift</label><select id="opShift"><option>A</option><option>B</option></select></div>
+      <div><label>In Time</label><input id="opIn" type="time"></div>
+      <div><label>Out Time</label><input id="opOut" type="time"></div>
+      <div><label>Phone (optional)</label><input id="opPhone"></div>
+    </div>
+    <div class="actions"><button class="good" onclick="addOperator()">Add Operator</button></div>
+  </div>
+  <div class="card tablebox" style="margin-top:14px">
+    <table><thead><tr><th>Code</th><th>Name</th><th>Shift</th><th>In Time</th><th>Out Time</th><th>Phone</th><th></th></tr></thead><tbody id="operatorRows"></tbody></table>
+  </div>
+</section>
+
+<section id="inserts" class="page">
+  <div class="card">
+    <h2>Insert Master</h2>
+    <div class="formgrid">
+      <div><label>Insert Name</label><input id="iName"></div>
+      <div><label>Insert Code</label><input id="iCode"></div>
+      <div><label>Brand</label><input id="iBrand" placeholder="Sandvik / Mitsubishi / Korloy / etc."></div>
+      <div><label>Value per Insert (₹)</label><input id="iValue" type="number" min="0" step="0.01"></div>
+      <div><label>Opening Stock</label><input id="iOpening" type="number" min="0"></div>
+      <div><label>Minimum Stock Alert Level</label><input id="iMin" type="number" min="0"></div>
+    </div>
+    <div class="actions"><button class="good" onclick="addInsert()">Add Insert</button></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>Add Stock</h3>
+    <div class="formgrid">
+      <div><label>Insert</label><select id="stockInsert"></select></div>
+      <div><label>Stock In Qty</label><input id="stockQty" type="number" min="1"></div>
+      <div><label>Date</label><input id="stockDate" type="date"></div>
+    </div>
+    <div class="actions"><button class="primary" onclick="addStock()">Add Stock</button></div>
+  </div>
+
+  <div class="card tablebox" style="margin-top:14px">
+    <table><thead><tr><th>Code</th><th>Name</th><th>Brand</th><th>Value/pc</th><th>Opening</th><th>Stock In</th><th>Used</th><th>Current</th><th>Min Level</th><th>Status</th><th></th></tr></thead><tbody id="insertRows"></tbody></table>
+  </div>
+</section>
+
+<section id="messages" class="page">
+  <div class="card">
+    <h2>Operator Message / Photo / Voice Center</h2>
+    <p class="muted">Operators-ஐ தேர்வு செய்து text message தயார் செய்யலாம். Photo capture/upload மற்றும் voice recording சேர்த்து mobile share menu வழியாக WhatsApp / Messages / மற்ற apps-க்கு share செய்யலாம்.</p>
+    <div class="actions">
+      <button class="primary" onclick="selectAllOperators(true)">Select All Operators</button>
+      <button onclick="selectAllOperators(false)">Clear Selection</button>
+    </div>
+    <div id="messageOperators" class="grid2" style="margin-top:12px"></div>
+    <div style="margin-top:14px">
+      <label>Text Message</label>
+      <textarea id="msgText" rows="5" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:9px" placeholder="Message type செய்யவும்..."></textarea>
+    </div>
+    <div class="formgrid" style="margin-top:14px">
+      <div>
+        <label>Photo / Camera</label>
+        <input id="msgPhoto" type="file" accept="image/*" capture="environment" onchange="previewPhoto()">
+      </div>
+      <div>
+        <label>Voice Message</label>
+        <div class="actions" style="margin-top:0">
+          <button class="good" id="voiceStart" onclick="startVoice()">Start Recording</button>
+          <button class="danger" id="voiceStop" onclick="stopVoice()" disabled>Stop</button>
+        </div>
+        <small id="voiceStatus" class="muted">No voice recorded</small>
+      </div>
+    </div>
+    <div id="photoPreview" style="margin-top:12px"></div>
+    <audio id="voicePreview" controls style="width:100%;margin-top:12px;display:none"></audio>
+    <div class="actions">
+      <button class="primary" onclick="shareMessage()">Share Text / Photo / Voice</button>
+      <button onclick="sendSMSSelected()">SMS Selected Operators</button>
+      <button class="good" onclick="saveNotice()">Save Notice in App</button>
+    </div>
+    <div class="notice">குறிப்பு: Static Chrome/GitHub app-ல் WhatsApp அல்லது SMS-ஐ 10 பேருக்கும் தானாக send செய்ய browser அனுமதிக்காது. இந்த button phone-ன் share/send screen-ஐ திறக்கும்; அங்கே recipients/app தேர்வு செய்து send செய்ய வேண்டும்.</div>
+  </div>
+
+  <h3 class="sectiontitle">Saved Notices</h3>
+  <div class="card" id="savedNotices"></div>
+</section>
+
+<section id="backup" class="page">
+  <div class="card">
+    <h2>Backup / Restore</h2>
+    <p class="muted">Data இந்த browser/device-ல் localStorage-ல் save ஆகும். Device change செய்யும் முன் backup download செய்யுங்கள்.</p>
+    <div class="actions">
+      <button class="primary" onclick="exportBackup()">Download JSON Backup</button>
+      <button onclick="exportCSV()">Export Entries CSV</button>
+      <input class="no-print" id="importFile" type="file" accept=".json,application/json" style="max-width:300px">
+      <button onclick="importBackup()">Restore Backup</button>
+      <button class="danger" onclick="clearAll()">Clear All Data</button>
+    </div>
+  </div>
+</section>
+</div>
+
+<script>
+const KEY='cnc_insert_manager_pro_v23_complete_v1';
+function blankDB(){return {operators:[],inserts:[],entries:[],stockIn:[],notices:[]}}
+function loadDB(){try{const d=JSON.parse(localStorage.getItem(KEY))||blankDB();d.notices=d.notices||[];return d}catch(e){return blankDB()}}
+function saveDB(db){
+  localStorage.setItem(KEY,JSON.stringify(db));
+  if(window.cloudDBReady && window.cloudDB){
+    window.cloudDB.ref('cncManager/db').set(db).catch(e=>console.warn('Cloud save failed',e));
+  }
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function today(){const d=new Date(),z=d.getTimezoneOffset()*60000;return new Date(d-z).toISOString().slice(0,10)}
+function showPage(id){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');refreshAll()}
+function target(cycle,hours){cycle=+cycle||0;hours=+hours||0;return cycle>0?(hours*60)/cycle:0}
+function pct(actual,t){return t>0?(actual/t*100):0}
+function entryInserts(x){
+ if(Array.isArray(x.inserts))return x.inserts.filter(i=>i&&i.code);
+ return x.insertCode?[{code:x.insertCode,name:x.insertName||'',qty:+x.qty||0,unitValue:+x.unitValue||0,value:+x.value||0}]:[]
+}
+function currentStock(db,code){
+ const it=db.inserts.find(x=>x.code===code); if(!it)return 0;
+ const stockin=db.stockIn.filter(x=>x.code===code).reduce((a,x)=>a+(+x.qty||0),0);
+ const used=db.entries.reduce((sum,e)=>sum+entryInserts(e).filter(i=>i.code===code).reduce((a,i)=>a+(+i.qty||0),0),0);
+ return (+it.opening||0)+stockin-used
+}
+function normalize12(t){
+ t=String(t||'').trim().replace('.',':');
+ const m=t.match(/^(\d{1,2})(?::(\d{1,2}))?$/);if(!m)return '';
+ let h=+m[1],min=+(m[2]||0);if(h<1||h>12||min<0||min>59)return '';
+ return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0')
+}
+function to24(t,period){
+ t=normalize12(t);if(!t)return '';let [h,m]=t.split(':').map(Number);
+ if(String(period).toUpperCase()==='AM'){if(h===12)h=0}else{if(h!==12)h+=12}
+ return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')
+}
+function from24(t){
+ if(!t||!/^\d{1,2}:\d{2}$/.test(t))return {time:'',period:'AM'};
+ let [h,m]=t.split(':').map(Number),p=h>=12?'PM':'AM';h=h%12||12;
+ return {time:String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'),period:p}
+}
+function format12(t){const z=from24(t);return z.time?z.time+' '+z.period:''}
+function hoursBetween(a,b){
+ if(!a||!b)return 0;
+ const [ah,am]=a.split(':').map(Number),[bh,bm]=b.split(':').map(Number);
+ let mins=(bh*60+bm)-(ah*60+am); if(mins<0)mins+=24*60; return mins/60
+}
+function selectedEntryInserts(db){
+ const arr=[];
+ for(let n=1;n<=6;n++){
+  const code=document.getElementById('eInsert'+n).value,qty=+document.getElementById('eQty'+n).value||0;
+  if(code){const it=db.inserts.find(x=>x.code===code); if(it)arr.push({code:it.code,name:it.name,brand:it.brand||'',qty,unitValue:+it.value||0,value:qty*(+it.value||0)})}
+ }
+ return arr
+}
+function calcEntry(){
+ const db=loadDB(),op=db.operators.find(x=>x.code===eOperator.value);
+ if(op && !eShift.dataset.touched)eShift.value=op.shift||'A';
+ if(op && !eIn.dataset.touched){const z=from24(op.inTime||'');eIn.value=z.time;eInPeriod.value=z.period}
+ if(op && !eOut.dataset.touched){const z=from24(op.outTime||'');eOut.value=z.time;eOutPeriod.value=z.period}
+ const in24=to24(eIn.value,eInPeriod.value),out24=to24(eOut.value,eOutPeriod.value);
+ const hrs=hoursBetween(in24,out24);eHours.value=hrs?hrs.toFixed(2):'';
+ const t=target(eCycle.value,hrs),p=pct(+eActual.value||0,t),v=selectedEntryInserts(db).reduce((a,i)=>a+i.value,0);
+ entryCalc.innerHTML=`Working Hours: <b>${hrs.toFixed(2)}</b> &nbsp; Target: <b>${t.toFixed(1)}</b> &nbsp; Operator: <b>${p.toFixed(1)}%</b> &nbsp; Insert Value: <b>${money(v)}</b>`;
+}
+eShift.addEventListener('change',()=>eShift.dataset.touched='1');
+['eIn','eInPeriod'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{eIn.dataset.touched='1';calcEntry()}));
+['eOut','eOutPeriod'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{eOut.dataset.touched='1';calcEntry()}));
+['eOperator','eCycle','eActual','eIn','eOut','eInPeriod','eOutPeriod',...Array.from({length:6},(_,i)=>'eInsert'+(i+1)),...Array.from({length:6},(_,i)=>'eQty'+(i+1))].forEach(id=>document.getElementById(id).addEventListener('input',calcEntry));
+
+function addOperator(){
+ const db=loadDB(),code=opCode.value.trim(),name=opName.value.trim();
+ if(!code||!name)return alert('Employee Code மற்றும் Operator Name கொடுக்கவும்.');
+ if(db.operators.some(x=>x.code.toLowerCase()===code.toLowerCase()))return alert('இந்த Employee Code ஏற்கனவே உள்ளது.');
+ db.operators.push({code,name,shift:opShift.value,inTime:opIn.value,outTime:opOut.value,phone:opPhone.value.trim()});saveDB(db);
+ opCode.value=opName.value=opPhone.value=opIn.value=opOut.value='';refreshAll()
+}
+function addInsert(){
+ const db=loadDB(),code=iCode.value.trim(),name=iName.value.trim();
+ if(!code||!name)return alert('Insert Code மற்றும் Insert Name கொடுக்கவும்.');
+ if(db.inserts.some(x=>x.code.toLowerCase()===code.toLowerCase()))return alert('இந்த Insert Code ஏற்கனவே உள்ளது.');
+ db.inserts.push({code,name,brand:iBrand.value.trim(),value:+iValue.value||0,opening:+iOpening.value||0,min:+iMin.value||0});saveDB(db);
+ iCode.value=iName.value=iBrand.value=iValue.value=iOpening.value=iMin.value='';refreshAll()
+}
+function addStock(){
+ const db=loadDB(),code=stockInsert.value,qty=+stockQty.value||0;
+ if(!code||qty<=0)return alert('Insert மற்றும் Stock In Qty கொடுக்கவும்.');
+ db.stockIn.push({id:Date.now(),date:stockDate.value||today(),code,qty});saveDB(db);stockQty.value='';refreshAll()
+}
+function saveEntry(){
+ const db=loadDB(),op=db.operators.find(x=>x.code===eOperator.value);
+ if(!eDate.value||!op)return alert('Date மற்றும் Operator தேர்வு செய்யவும்.');
+ const in24=to24(eIn.value,eInPeriod.value),out24=to24(eOut.value,eOutPeriod.value);
+ if(!in24||!out24)return alert('In Time / Out Time-ஐ 12-hour format-ல் கொடுத்து AM அல்லது PM தேர்வு செய்யவும். உதாரணம்: 08:00 AM');
+ const ins=selectedEntryInserts(db);
+ if(!ins.length)return alert('குறைந்தது Insert 1 தேர்வு செய்யவும்.');
+ if(ins.some(i=>i.qty<=0))return alert('தேர்வு செய்த ஒவ்வொரு Insert-க்கும் Qty கொடுக்கவும்.');
+ const need={};ins.forEach(i=>need[i.code]=(need[i.code]||0)+i.qty);
+ for(const [code,qty] of Object.entries(need))if(currentStock(db,code)<qty)return alert(code+' Stock போதவில்லை. முதலில் Stock In சேர்க்கவும்.');
+ const totalQty=ins.reduce((a,i)=>a+i.qty,0),totalValue=ins.reduce((a,i)=>a+i.value,0),q=+eQuality.value||0,r=+eReject.value||0;
+ if(q+r>totalQty)return alert('Quality + Non-Quality Qty, Total Used Qty-ஐ விட அதிகமாக இருக்கக்கூடாது.');
+ const hrs=hoursBetween(in24,out24),t=target(eCycle.value,hrs),actual=+eActual.value||0,first=ins[0];
+ db.entries.push({id:Date.now(),date:eDate.value,operatorCode:op.code,operatorName:op.name,shift:eShift.value,inTime:in24,outTime:out24,machine:eMachine.value.trim(),job:eJob.value.trim(),partNo:ePartNo.value.trim(),cycle:+eCycle.value||0,hours:hrs,target:t,actual,percentage:pct(actual,t),inserts:ins,insertCode:first.code,insertName:first.name,qty:totalQty,unitValue:first.unitValue,value:totalValue,quality:q,reject:r});
+ saveDB(db);alert('Entry saved successfully.');clearEntry();refreshAll()
+}
+function clearEntry(){
+ eMachine.value=eJob.value=ePartNo.value=eCycle.value=eActual.value=eQuality.value=eReject.value='';
+ for(let n=1;n<=6;n++){document.getElementById('eInsert'+n).value='';document.getElementById('eQty'+n).value=''}
+ eIn.value=eOut.value=eHours.value='';eInPeriod.value='AM';eOutPeriod.value='PM';eIn.dataset.touched=eOut.dataset.touched=eShift.dataset.touched='';calcEntry()
+}
+function delOperator(code){if(!confirm('Operator delete செய்யவா?'))return;const db=loadDB();db.operators=db.operators.filter(x=>x.code!==code);saveDB(db);refreshAll()}
+function delInsert(code){if(!confirm('Insert master delete செய்யவா?'))return;const db=loadDB();db.inserts=db.inserts.filter(x=>x.code!==code);saveDB(db);refreshAll()}
+function delEntry(id){if(!confirm('இந்த entry delete செய்யவா?'))return;const db=loadDB();db.entries=db.entries.filter(x=>x.id!==id);saveDB(db);refreshAll()}
+
+function renderOperators(){
+ const db=loadDB();
+ operatorRows.innerHTML=db.operators.map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.shift)}</td><td>${esc(x.inTime||'')}</td><td>${esc(x.outTime||'')}</td><td>${esc(x.phone)}</td><td><button class="danger" onclick="delOperator('${esc(x.code)}')">Delete</button></td></tr>`).join('');
+ eOperator.innerHTML='<option value="">Select Operator</option>'+db.operators.map(x=>`<option value="${esc(x.code)}">${esc(x.code)} - ${esc(x.name)}</option>`).join('')
+}
+function renderInserts(){
+ const db=loadDB();
+ insertRows.innerHTML=db.inserts.map(x=>{
+   const si=db.stockIn.filter(s=>s.code===x.code).reduce((a,s)=>a+(+s.qty||0),0),used=db.entries.reduce((sum,e)=>sum+entryInserts(e).filter(i=>i.code===x.code).reduce((a,i)=>a+(+i.qty||0),0),0),cur=(+x.opening||0)+si-used,low=cur<= (+x.min||0);
+   return `<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.brand||'')}</td><td>${money(x.value)}</td><td>${x.opening}</td><td>${si}</td><td>${used}</td><td><b>${cur}</b></td><td>${x.min}</td><td class="${low?'badtxt':'goodtxt'}">${low?'LOW STOCK ALERT':'OK'}</td><td><button class="danger" onclick="delInsert('${esc(x.code)}')">Delete</button></td></tr>`
+ }).join('');
+ const opts='<option value="">Select Insert</option>'+db.inserts.map(x=>`<option value="${esc(x.code)}">${esc(x.code)} - ${esc(x.name)}</option>`).join('');
+ for(let n=1;n<=6;n++)document.getElementById('eInsert'+n).innerHTML=opts;stockInsert.innerHTML=opts
+}
+function renderEntries(){
+ const db=loadDB();
+ entryRows.innerHTML=[...db.entries].reverse().map(x=>{const ins=entryInserts(x),cells=Array.from({length:6},(_,i)=>{const z=ins[i];return `<td>${z?esc(z.code)+' × '+(+z.qty||0):''}</td>`}).join('');return `<tr><td>${x.date}</td><td>${esc(x.operatorName)}</td><td>${x.shift}</td><td>${esc(format12(x.inTime||''))}</td><td>${esc(format12(x.outTime||''))}</td><td>${(+x.hours||0).toFixed(2)}</td><td>${esc(x.machine)}</td><td>${esc(x.job)}</td><td>${esc(x.partNo||'')}</td><td>${(+x.target).toFixed(1)}</td><td>${x.actual}</td><td>${(+x.percentage).toFixed(1)}%</td>${cells}<td>${money(x.value)}</td><td>${x.quality}</td><td>${x.reject}</td><td><button class="danger" onclick="delEntry(${x.id})">Delete</button></td></tr>`}).join('')
+}
+function renderDashboard(){
+ const db=loadDB(),d=dashDate.value||today(),rows=db.entries.filter(x=>x.date===d);
+ const used=rows.reduce((a,x)=>a+(+x.qty||0),0),val=rows.reduce((a,x)=>a+(+x.value||0),0),quality=rows.reduce((a,x)=>a+(+x.quality||0),0),reject=rows.reduce((a,x)=>a+(+x.reject||0),0);
+ const totalAvailableBeforeToday=db.inserts.reduce((sum,it)=>{
+   const stockin=db.stockIn.filter(s=>s.code===it.code).reduce((a,s)=>a+(+s.qty||0),0);
+   const usedBefore=db.entries.filter(e=>e.date<d).reduce((sum,e)=>sum+entryInserts(e).filter(i=>i.code===it.code).reduce((a,i)=>a+(+i.qty||0),0),0);
+   return sum+(+it.opening||0)+stockin-usedBefore;
+ },0);
+ const remainingAfterToday=totalAvailableBeforeToday-used;
+ const alerts=db.inserts.filter(x=>currentStock(db,x.code)<= (+x.min||0)).length;
+ const remainingTotalValue=db.inserts.reduce((sum,it)=>sum+(currentStock(db,it.code)*(+it.value||0)),0);
+ const metrics=[
+ ['Total Insert Stock',totalAvailableBeforeToday],
+ ['Today Used Insert',used],
+ ['Remaining Insert',remainingAfterToday],
+ ['Today Used Insert Value',money(val)],
+ ['Remaining Insert Total Value',money(remainingTotalValue)],
+ ['Stock Alerts',alerts]
+ ];
+ kpis.innerHTML=metrics.map(([a,b])=>`<div class="card kpi"><small>${a}</small><b>${b}</b></div>`).join('');
+ function shiftBox(s){
+   const r=rows.filter(x=>x.shift===s),t=r.reduce((a,x)=>a+(+x.target||0),0),ac=r.reduce((a,x)=>a+(+x.actual||0),0),p=pct(ac,t);
+   return `<p>Overall Percentage: <b class="${p>=100?'goodtxt':p>=80?'warntxt':'badtxt'}">${p.toFixed(1)}%</b></p>`
+ }
+ shiftA.innerHTML=shiftBox('A');shiftB.innerHTML=shiftBox('B');
+
+ const ops={};rows.forEach(x=>{const k=x.operatorCode;ops[k]??={name:x.operatorName,code:k,shift:x.shift,target:0,actual:0,qty:0,value:0};ops[k].target+=+x.target||0;ops[k].actual+=+x.actual||0;ops[k].qty+=+x.qty||0;ops[k].value+=+x.value||0});
+ operatorPerf.innerHTML=Object.values(ops).map(x=>{const p=pct(x.actual,x.target);return `<tr><td>${esc(x.name)}</td><td>${esc(x.code)}</td><td>${x.shift}</td><td>${x.target.toFixed(1)}</td><td>${x.actual}</td><td class="${p>=100?'goodtxt':p>=80?'warntxt':'badtxt'}">${p.toFixed(1)}%</td><td>${x.qty}</td><td>${money(x.value)}</td></tr>`}).join('')||'<tr><td colspan="8" class="muted">No data for selected date</td></tr>';
+
+ insertSummary.innerHTML=db.inserts.map(it=>{
+   const usedItems=rows.flatMap(entryInserts).filter(i=>i.code===it.code),u=usedItems.reduce((a,i)=>a+(+i.qty||0),0),v=usedItems.reduce((a,i)=>a+(+i.value||0),0),cur=currentStock(db,it.code),remainingValue=cur*(+it.value||0),low=cur<= (+it.min||0);
+   return `<tr><td>${esc(it.code)} - ${esc(it.name)}${it.brand?' ('+esc(it.brand)+')':''}</td><td>${u}</td><td>${money(v)}</td><td>${cur}</td><td>${money(remainingValue)}</td><td class="${low?'badtxt':'goodtxt'}">${low?'LOW STOCK ALERT':'OK'}</td></tr>`
+ }).join('')
+ renderMonthlyPerformance()
+}
+function monthKey(dateStr){return String(dateStr||'').slice(0,7)}
+function monthLabel(key){
+ const [y,m]=key.split('-').map(Number);return new Date(y,m-1,1).toLocaleDateString('en-IN',{month:'short',year:'2-digit'})
+}
+function recentMonthKeys(endDate,count){
+ const d=new Date((endDate||today())+'T00:00:00'),arr=[];
+ for(let i=count-1;i>=0;i--){const x=new Date(d.getFullYear(),d.getMonth()-i,1);arr.push(x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'))}
+ return arr
+}
+function renderMonthlyPerformance(){
+ const db=loadDB(),shift=perfShift?.value||'ALL',months=+(perfMonths?.value||6),end=dashDate.value||today();
+ const operators=db.operators.filter(o=>shift==='ALL'||o.shift===shift);
+ const prev=perfOperator?.value||'';
+ if(perfOperator){perfOperator.innerHTML='<option value="">Select Operator</option>'+operators.map(o=>`<option value="${esc(o.code)}">${esc(o.code)} - ${esc(o.name)}</option>`).join('');if(operators.some(o=>o.code===prev))perfOperator.value=prev}
+ const code=perfOperator?.value||'';
+ const canvas=document.getElementById('perfChart'),ctx=canvas?.getContext('2d');if(!ctx)return;
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ if(!code){perfCompare.innerHTML='Operator தேர்வு செய்தால் மாதாந்திர performance chart காணலாம்.';ctx.fillText('Select Operator',30,40);return}
+ const op=db.operators.find(o=>o.code===code),keys=recentMonthKeys(end,months);
+ const vals=keys.map(k=>{const r=db.entries.filter(e=>e.operatorCode===code&&monthKey(e.date)===k),t=r.reduce((a,e)=>a+(+e.target||0),0),ac=r.reduce((a,e)=>a+(+e.actual||0),0);return pct(ac,t)});
+ const cur=vals.at(-1)||0,pre=vals.at(-2)||0,diff=cur-pre,dir=diff>0?'▲ Increased':diff<0?'▼ Decreased':'— No Change';
+ perfCompare.innerHTML=`<b>${esc(op?.name||code)}</b> | ${monthLabel(keys.at(-2)||keys.at(-1))}: <b>${pre.toFixed(1)}%</b> → ${monthLabel(keys.at(-1))}: <b>${cur.toFixed(1)}%</b> | <b class="${diff>0?'goodtxt':diff<0?'badtxt':'warntxt'}">${dir} ${Math.abs(diff).toFixed(1)}%</b>`;
+ const W=canvas.width,H=canvas.height,L=65,R=25,T=25,B=55,max=Math.max(120,Math.ceil(Math.max(...vals,100)/20)*20),cw=W-L-R,ch=H-T-B;
+ ctx.font='13px Arial';ctx.textAlign='right';ctx.textBaseline='middle';
+ for(let p=0;p<=max;p+=20){const y=T+ch-(p/max)*ch;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.strokeStyle='#dbe3ec';ctx.stroke();ctx.fillStyle='#64748b';ctx.fillText(p+'%',L-8,y)}
+ const step=cw/keys.length,bw=Math.min(60,step*.55);ctx.textAlign='center';ctx.textBaseline='top';
+ vals.forEach((v,i)=>{const x=L+step*i+step/2,y=T+ch-(Math.min(v,max)/max)*ch,h=T+ch-y;ctx.fillStyle=v>=100?'#087f5b':v>=80?'#b26a00':'#b42318';ctx.fillRect(x-bw/2,y,bw,h);ctx.fillStyle='#17212b';ctx.fillText(v.toFixed(1)+'%',x,Math.max(T,y-20));ctx.fillStyle='#64748b';ctx.fillText(monthLabel(keys[i]),x,H-B+12)});
+ ctx.strokeStyle='#17212b';ctx.beginPath();ctx.moveTo(L,T);ctx.lineTo(L,T+ch);ctx.lineTo(W-R,T+ch);ctx.stroke()
+}
+
+function exportBackup(){
+ const blob=new Blob([JSON.stringify(loadDB(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='CNC_Insert_Manager_PRO_V23_Backup_'+today()+'.json';a.click();URL.revokeObjectURL(a.href)
+}
+function importBackup(){
+ const f=importFile.files[0];if(!f)return alert('Backup JSON file தேர்வு செய்யவும்.');
+ const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.operators||!d.inserts||!d.entries)throw 0;saveDB(d);alert('Backup restored.');refreshAll()}catch(e){alert('Invalid backup file.')}};r.readAsText(f)
+}
+function exportCSV(){
+ const rows=loadDB().entries,heads=['Date','Operator Code','Operator Name','Shift','In Time','Out Time','Working Hours','Machine','Job','Target','Actual','Operator %','Insert 1','Qty 1','Insert 2','Qty 2','Insert 3','Qty 3','Insert 4','Qty 4','Insert 5','Qty 5','Insert 6','Qty 6','Total Insert Value','Quality Qty','Non-Quality Qty'];
+ const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+ const csv=[heads,...rows.map(x=>{const ins=entryInserts(x),a=[x.date,x.operatorCode,x.operatorName,x.shift,x.inTime||'',x.outTime||'',x.hours||0,x.machine,x.job,x.target,x.actual,x.percentage];for(let i=0;i<6;i++){a.push(ins[i]?.code||'',ins[i]?.qty||'')}a.push(x.value,x.quality,x.reject);return a})].map(r=>r.map(q).join(',')).join('\n');
+ const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='CNC_Insert_Manager_PRO_V23_Entries.csv';a.click();URL.revokeObjectURL(a.href)
+}
+function clearAll(){if(confirm('அனைத்து data-வும் delete ஆகும். தொடரவா?')){localStorage.removeItem(KEY);refreshAll()}}
+let voiceRecorder=null,voiceChunks=[],voiceBlob=null;
+function renderMessageCenter(){
+ const db=loadDB();
+ messageOperators.innerHTML=db.operators.map(x=>`<label class="card" style="display:flex;align-items:center;gap:10px;margin:0"><input class="msgOp" type="checkbox" value="${esc(x.code)}" style="width:auto"><span><b>${esc(x.name)}</b><br><small>${esc(x.code)} ${x.phone?'• '+esc(x.phone):'• No phone'}</small></span></label>`).join('')||'<div class="muted">Operator Master-ல் employees add செய்யவும்.</div>';
+ savedNotices.innerHTML=[...(db.notices||[])].reverse().map(n=>`<div style="padding:10px 0;border-bottom:1px solid #e5e7eb"><b>${esc(n.date)}</b> — ${esc(n.text||'(Media notice)')}<br><small class="muted">To: ${esc((n.names||[]).join(', '))}</small></div>`).join('')||'<span class="muted">No saved notices</span>';
+}
+function selectAllOperators(v){document.querySelectorAll('.msgOp').forEach(x=>x.checked=v)}
+function selectedMessageOperators(){const db=loadDB(),codes=[...document.querySelectorAll('.msgOp:checked')].map(x=>x.value);return db.operators.filter(x=>codes.includes(x.code))}
+function previewPhoto(){const f=msgPhoto.files[0];photoPreview.innerHTML='';if(!f)return;const img=document.createElement('img');img.src=URL.createObjectURL(f);img.style='max-width:260px;max-height:220px;border-radius:10px;border:1px solid #dbe3ec';photoPreview.appendChild(img)}
+async function startVoice(){
+ try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});voiceChunks=[];voiceRecorder=new MediaRecorder(stream);voiceRecorder.ondataavailable=e=>{if(e.data.size)voiceChunks.push(e.data)};voiceRecorder.onstop=()=>{voiceBlob=new Blob(voiceChunks,{type:voiceRecorder.mimeType||'audio/webm'});voicePreview.src=URL.createObjectURL(voiceBlob);voicePreview.style.display='block';voiceStatus.textContent='Voice recorded';stream.getTracks().forEach(t=>t.stop())};voiceRecorder.start();voiceStart.disabled=true;voiceStop.disabled=false;voiceStatus.textContent='Recording...'}catch(e){alert('Microphone permission கிடைக்கவில்லை. Chrome permission check செய்யவும்.')}
+}
+function stopVoice(){if(voiceRecorder&&voiceRecorder.state!=='inactive'){voiceRecorder.stop();voiceStart.disabled=false;voiceStop.disabled=true}}
+async function shareMessage(){
+ const ops=selectedMessageOperators();if(!ops.length)return alert('குறைந்தது ஒரு Operator தேர்வு செய்யவும்.');
+ const text=msgText.value.trim();const files=[];const photo=msgPhoto.files[0];if(photo)files.push(photo);if(voiceBlob)files.push(new File([voiceBlob],'voice-message.webm',{type:voiceBlob.type||'audio/webm'}));
+ const names=ops.map(x=>x.name).join(', '),shareText=(text||'Operator Notice')+'\n\nTo: '+names;
+ try{if(navigator.share){const data={title:'CNC Insert Manager Message',text:shareText};if(files.length&&navigator.canShare&&navigator.canShare({files}))data.files=files;await navigator.share(data)}else{await navigator.clipboard.writeText(shareText);alert('Share வசதி இல்லை. Message clipboard-க்கு copy செய்யப்பட்டது.')}}catch(e){if(e.name!=='AbortError')alert('Share செய்ய முடியவில்லை: '+e.message)}
+}
+function sendSMSSelected(){
+ const ops=selectedMessageOperators().filter(x=>x.phone);if(!ops.length)return alert('Phone number உள்ள Operator-ஐ தேர்வு செய்யவும்.');
+ const nums=ops.map(x=>x.phone.replace(/[^+\d]/g,'')).filter(Boolean).join(',');const body=encodeURIComponent(msgText.value.trim());location.href='sms:'+nums+'?body='+body;
+}
+function saveNotice(){
+ const ops=selectedMessageOperators();if(!ops.length)return alert('குறைந்தது ஒரு Operator தேர்வு செய்யவும்.');const db=loadDB();db.notices=db.notices||[];db.notices.push({id:Date.now(),date:new Date().toLocaleString('en-IN'),text:msgText.value.trim(),names:ops.map(x=>x.name),codes:ops.map(x=>x.code),hasPhoto:!!msgPhoto.files[0],hasVoice:!!voiceBlob});saveDB(db);renderMessageCenter();alert('Notice saved in this device.');
+}
+
+const ALERT_SETTINGS_KEY='cnc_report_deadlines_v1';
+let lastAdminLateSignature='';
+
+function getDeadlineSettings(){
+  try{return JSON.parse(localStorage.getItem(ALERT_SETTINGS_KEY))||{A:'18:00',B:'06:00',BNext:true}}
+  catch(e){return {A:'18:00',B:'06:00',BNext:true}}
+}
+function loadDeadlineSettingsUI(){
+  const s=getDeadlineSettings();
+  if(window.deadlineA) deadlineA.value=s.A||'18:00';
+  if(window.deadlineB) deadlineB.value=s.B||'06:00';
+  if(window.deadlineBNext) deadlineBNext.value=s.BNext===false?'0':'1';
+}
+function saveDeadlineSettings(){
+  const s={A:deadlineA.value||'18:00',B:deadlineB.value||'06:00',BNext:deadlineBNext.value==='1'};
+  localStorage.setItem(ALERT_SETTINGS_KEY,JSON.stringify(s));
+  if(window.cloudDBReady&&window.cloudDB) window.cloudDB.ref('cncManager/settings/reportDeadlines').set(s);
+  renderReportAlerts();
+  alert('Deadline settings saved.');
+}
+function localDateTime(dateStr,timeStr,nextDay){
+  const [y,m,d]=dateStr.split('-').map(Number), [hh,mm]=(timeStr||'00:00').split(':').map(Number);
+  const dt=new Date(y,m-1,d,hh,mm,0,0);
+  if(nextDay)dt.setDate(dt.getDate()+1);
+  return dt;
+}
+function reportStatusFor(op,dateStr,db,now=new Date()){
+  const s=getDeadlineSettings(), shift=op.shift||'A';
+  const submitted=db.entries.some(e=>e.date===dateStr && e.operatorCode===op.code);
+  const nextDay=shift==='B' && !!s.BNext;
+  const deadline=localDateTime(dateStr,shift==='B'?s.B:s.A,nextDay);
+  return {submitted,deadline,status:submitted?'SUBMITTED':(now>deadline?'LATE':'PENDING')};
+}
+function fmtDeadline(d){
+  return d.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
+}
+
+async function registerFCMTokenFor(roleCode){
+  if(!window.firebase || !firebase.messaging) throw new Error('Firebase Messaging SDK not loaded');
+  if(!window.FIREBASE_VAPID_KEY) throw new Error('VAPID key not configured');
+  const reg=await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+  await navigator.serviceWorker.ready;
+  const messaging=firebase.messaging();
+  const token=await messaging.getToken({vapidKey:window.FIREBASE_VAPID_KEY,serviceWorkerRegistration:reg});
+  if(!token) throw new Error('FCM token not returned');
+  const key=btoa(token).replace(/[.#$\[\]\/]/g,'_').slice(0,120);
+  await window.cloudDB.ref(`cncManager/fcmTokens/${roleCode}/${key}`).set(token);
+  return token;
+}
+
+async function enableAdminAlerts(){
+  if(!('Notification' in window))return alert('இந்த browser notification support செய்யவில்லை.');
+  const p=await Notification.requestPermission();
+  if(p!=='granted') return alert('Notification permission கிடைக்கவில்லை.');
+  try{
+    await registerFCMTokenFor('ADMIN');
+    alert('Admin push notifications enabled.');
+  }catch(e){
+    console.error(e);
+    alert('Browser alert enabled. FCM setup இன்னும் complete இல்லை: '+e.message);
+  }
+  renderReportAlerts();
+}
+function renderReportAlerts(){
+  if(!window.reportAlertRows)return;
+  const db=loadDB(),date=dashDate.value||today(), now=new Date();
+  const items=db.operators.map(op=>({op,...reportStatusFor(op,date,db,now)}));
+  const late=items.filter(x=>x.status==='LATE'), pending=items.filter(x=>x.status==='PENDING'), done=items.filter(x=>x.status==='SUBMITTED');
+  reportAlertRows.innerHTML=items.map(x=>{
+    const cls=x.status==='SUBMITTED'?'alert-good':x.status==='LATE'?'alert-bad':'alert-warn';
+    return `<tr><td>${esc(x.op.name)}</td><td>${esc(x.op.code)}</td><td>${esc(x.op.shift||'A')}</td><td>${fmtDeadline(x.deadline)}</td><td><span class="alert-pill ${cls}">${x.status}</span></td></tr>`
+  }).join('')||'<tr><td colspan="5" class="muted">No operators</td></tr>';
+  reportAlertSummary.innerHTML=`Submitted: <b>${done.length}</b> &nbsp; Pending: <b>${pending.length}</b> &nbsp; Late: <b class="${late.length?'badtxt':''}">${late.length}</b>`;
+  const sig=date+'|'+late.map(x=>x.op.code).sort().join(',');
+  if(late.length && Notification.permission==='granted' && sig!==lastAdminLateSignature){
+    new Notification('CNC Daily Report Alert',{body:`${late.length} operator report(s) late: `+late.map(x=>x.op.name).join(', ')});
+    lastAdminLateSignature=sig;
+  }
+}
+loadDeadlineSettingsUI();
+setInterval(()=>renderReportAlerts(),60000);
+
+function refreshAll(){renderOperators();renderInserts();renderEntries();renderDashboard();renderReportAlerts();renderMessageCenter();calcEntry()}
+dashDate.value=eDate.value=stockDate.value=today();eInPeriod.value='AM';eOutPeriod.value='PM';refreshAll();
+</script>
+
+<script>
+(function(){
+  const status = document.createElement('div');
+  status.id='cloudStatus';
+  status.style.cssText='position:fixed;right:10px;bottom:10px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #dbe3ec;font-size:12px;z-index:99';
+  status.textContent='Cloud: connecting...';
+  document.body.appendChild(status);
+
+  function setStatus(t){status.textContent=t;}
+  if(!window.FIREBASE_CONFIG || !window.FIREBASE_CONFIG.apiKey){
+    setStatus('Cloud: Firebase config required');
+    return;
+  }
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
+    const db=firebase.database();
+    window.cloudDB=db; window.cloudDBReady=true;
+
+    db.ref('cncManager/settings/reportDeadlines').once('value').then(s=>{
+      if(!s.exists()) db.ref('cncManager/settings/reportDeadlines').set(getDeadlineSettings());
+    });
+    db.ref('cncManager/db').once('value').then(s=>{
+      if(s.exists()){
+        localStorage.setItem(KEY, JSON.stringify(s.val()));
+        refreshAll();
+      } else {
+        db.ref('cncManager/db').set(loadDB());
+      }
+    });
+
+    db.ref('cncManager/db').on('value',s=>{
+      if(s.exists()){
+        localStorage.setItem(KEY, JSON.stringify(s.val()));
+        refreshAll();
+        setStatus('Cloud: LIVE');
+      }
+    },()=>setStatus('Cloud: permission/error'));
+
+    db.ref('cncManager/settings/reportDeadlines').on('value',s=>{
+      if(s.exists()){
+        localStorage.setItem(ALERT_SETTINGS_KEY,JSON.stringify(s.val()));
+        loadDeadlineSettingsUI();
+        renderReportAlerts();
+      }
+    });
+
+    db.ref('cncManager/operatorSubmissions').on('child_added', snap=>{
+      const entry=snap.val();
+      if(!entry || !entry.sourceId) return;
+      const local=loadDB();
+      if(!local.entries.some(x=>x.sourceId===entry.sourceId)){
+        local.entries.push(entry);
+        localStorage.setItem(KEY,JSON.stringify(local));
+        db.ref('cncManager/db').set(local).then(()=>snap.ref.remove());
+        refreshAll();
+      } else {
+        snap.ref.remove();
+      }
+    });
+
+    setStatus('Cloud: LIVE');
+  }catch(e){
+    console.error(e); setStatus('Cloud: setup error');
+  }
+
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+  }
+})();
+</script>
+
+<script>
+(function(){
+  try{
+    if(window.firebase && firebase.messaging){
+      const m=firebase.messaging();
+      m.onMessage(payload=>{
+        const n=payload.notification||{};
+        if(Notification.permission==='granted'){
+          new Notification(n.title||'CNC Alert',{body:n.body||'New notification'});
+        }
+      });
+    }
+  }catch(e){console.warn('Admin foreground messaging init',e)}
+})();
+</script>
 </body>
 </html>
