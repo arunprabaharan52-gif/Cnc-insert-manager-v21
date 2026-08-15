@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#15324b">
-<title>CNC Daily Operator Report</title>
-<link rel="manifest" href="./operator-manifest.json">
+<title>CNC PRO V23 Operator</title>
+<link rel="manifest" href="./manifest.json">
 <style>
 :root{--bg:#f4f7fb;--card:#fff;--ink:#17212b;--muted:#64748b;--primary:#15324b;--good:#087f5b;--bad:#b42318;--line:#dbe3ec}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Tamil",sans-serif;background:var(--bg);color:var(--ink)}
@@ -20,6 +20,7 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
 </style>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
 <script src="./firebase-config.js"></script>
 </head>
 <body>
@@ -149,10 +150,32 @@ function operatorReportStatus(){
     lastOperatorNotice=key;
   }
 }
+
+async function registerOperatorFCMToken(){
+  const op=master.operators.find(x=>x.code===eOperator.value);
+  if(!op) throw new Error('Operator select செய்யவும்');
+  if(!window.FIREBASE_VAPID_KEY) throw new Error('VAPID key not configured');
+  const reg=await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+  await navigator.serviceWorker.ready;
+  const messaging=firebase.messaging();
+  const token=await messaging.getToken({vapidKey:window.FIREBASE_VAPID_KEY,serviceWorkerRegistration:reg});
+  if(!token) throw new Error('FCM token not returned');
+  const key=btoa(token).replace(/[.#$\[\]\/]/g,'_').slice(0,120);
+  await cloudDB.ref(`cncManager/fcmTokens/${op.code}/${key}`).set(token);
+  return token;
+}
+
 async function enableOperatorAlerts(){
   if(!('Notification' in window))return alert('இந்த browser notification support செய்யவில்லை.');
   const p=await Notification.requestPermission();
-  alert(p==='granted'?'Report reminder enabled.':'Notification permission கிடைக்கவில்லை.');
+  if(p!=='granted') return alert('Notification permission கிடைக்கவில்லை.');
+  try{
+    await registerOperatorFCMToken();
+    alert('Report reminder + background push enabled.');
+  }catch(e){
+    console.error(e);
+    alert('Browser reminder enabled. FCM setup இன்னும் complete இல்லை: '+e.message);
+  }
   operatorReportStatus();
 }
 
@@ -202,7 +225,7 @@ if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey){
     });
     cloudDB.ref('cncManager/db').on('value',s=>{
       if(s.exists()){
-        master=s.val();renderMaster();
+        master=normalizeMaster(s.val());renderMaster();
         const saved=localStorage.getItem('cnc_operator_code');
         if(saved && [...eOperator.options].some(x=>x.value===saved)){eOperator.value=saved;const op=master.operators.find(x=>x.code===saved);if(op)eShift.value=op.shift||'A';}
         statusEl.className='notice ok';statusEl.textContent='Cloud LIVE — report ready';
@@ -214,7 +237,22 @@ if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey){
 }else{
   statusEl.className='notice err';statusEl.textContent='Firebase config இன்னும் சேர்க்கவில்லை.';
 }
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js').catch(()=>{});}
+</script>
+<script>
+(function(){
+  try{
+    if(window.firebase && firebase.messaging){
+      const m=firebase.messaging();
+      m.onMessage(payload=>{
+        const n=payload.notification||{};
+        if(Notification.permission==='granted'){
+          new Notification(n.title||'Daily Report Alert',{body:n.body||'New notification'});
+        }
+      });
+    }
+  }catch(e){console.warn('Operator foreground messaging init',e)}
+})();
 </script>
 </body>
 </html>

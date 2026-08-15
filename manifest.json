@@ -3,7 +3,7 @@
   "name": "CNC PRO V23 Admin",
   "short_name": "CNC Admin",
   "description": "CNC Insert Manager PRO V23 - Admin Dashboard",
-  "start_url": "./",
+  "start_url": "./admin.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f7fb",

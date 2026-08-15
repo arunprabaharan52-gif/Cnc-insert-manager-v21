@@ -50,7 +50,7 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
     <button onclick="showPage('inserts')">Insert Master / Stock</button>
     <button onclick="showPage('messages')">Messages / Photos</button>
     <button onclick="showPage('backup')">Backup</button>
-    <a class="btn primary" href="./operator.html" target="_blank" rel="noopener">Operator Site</a>
+    <a class="btn primary" href="./operator.html" style="color:#fff;text-decoration:underline">Operator Site</a>
   </nav>
 </header>
 
@@ -157,8 +157,8 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
       <div><label>Employee Code</label><input id="opCode"></div>
       <div><label>Operator Name</label><input id="opName"></div>
       <div><label>Default Shift</label><select id="opShift"><option>A</option><option>B</option></select></div>
-      <div><label>In Time</label><div style="display:flex;gap:6px"><input id="opIn" type="text" inputmode="numeric" placeholder="08:00" maxlength="5"><select id="opInPeriod" style="max-width:90px"><option>AM</option><option>PM</option></select></div></div>
-      <div><label>Out Time</label><div style="display:flex;gap:6px"><input id="opOut" type="text" inputmode="numeric" placeholder="05:00" maxlength="5"><select id="opOutPeriod" style="max-width:90px"><option>AM</option><option>PM</option></select></div></div>
+      <div><label>In Time</label><input id="opIn" type="time"></div>
+      <div><label>Out Time</label><input id="opOut" type="time"></div>
       <div><label>Phone (optional)</label><input id="opPhone"></div>
     </div>
     <div class="actions"><button class="good" onclick="addOperator()">Add Operator</button></div>
@@ -256,8 +256,11 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
 <script>
 const KEY='cnc_insert_manager_pro_v23_complete_v1';
 function blankDB(){return {operators:[],inserts:[],entries:[],stockIn:[],notices:[]}}
-function loadDB(){try{const d=JSON.parse(localStorage.getItem(KEY))||blankDB();d.notices=d.notices||[];return d}catch(e){return blankDB()}}
+function asArray(v){if(Array.isArray(v))return v.filter(Boolean);if(v&&typeof v==='object')return Object.values(v).filter(Boolean);return []}
+function normalizeDB(raw){raw=raw||{};return {operators:asArray(raw.operators),inserts:asArray(raw.inserts),entries:asArray(raw.entries),stockIn:asArray(raw.stockIn),notices:asArray(raw.notices)}}
+function loadDB(){try{return normalizeDB(JSON.parse(localStorage.getItem(KEY)))}catch(e){return blankDB()}}
 function saveDB(db){
+  db=normalizeDB(db);
   localStorage.setItem(KEY,JSON.stringify(db));
   if(window.cloudDBReady && window.cloudDB){
     window.cloudDB.ref('cncManager/db').set(db).catch(e=>console.warn('Cloud save failed',e));
@@ -328,10 +331,8 @@ function addOperator(){
  const db=loadDB(),code=opCode.value.trim(),name=opName.value.trim();
  if(!code||!name)return alert('Employee Code மற்றும் Operator Name கொடுக்கவும்.');
  if(db.operators.some(x=>x.code.toLowerCase()===code.toLowerCase()))return alert('இந்த Employee Code ஏற்கனவே உள்ளது.');
- const in24=to24(opIn.value,opInPeriod.value),out24=to24(opOut.value,opOutPeriod.value);
- if(!in24||!out24)return alert('In Time / Out Time-ஐ 12-hour format-ல் கொடுத்து AM அல்லது PM தேர்வு செய்யவும். உதாரணம்: 08:00 AM');
- db.operators.push({code,name,shift:opShift.value,inTime:in24,outTime:out24,phone:opPhone.value.trim()});saveDB(db);
- opCode.value=opName.value=opPhone.value=opIn.value=opOut.value='';opInPeriod.value='AM';opOutPeriod.value='PM';refreshAll()
+ db.operators.push({code,name,shift:opShift.value,inTime:opIn.value,outTime:opOut.value,phone:opPhone.value.trim()});saveDB(db);
+ opCode.value=opName.value=opPhone.value=opIn.value=opOut.value='';refreshAll()
 }
 function addInsert(){
  const db=loadDB(),code=iCode.value.trim(),name=iName.value.trim();
@@ -372,7 +373,7 @@ function delEntry(id){if(!confirm('இந்த entry delete செய்யவ�
 
 function renderOperators(){
  const db=loadDB();
- operatorRows.innerHTML=db.operators.map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.shift)}</td><td>${esc(format12(x.inTime||''))}</td><td>${esc(format12(x.outTime||''))}</td><td>${esc(x.phone)}</td><td><button class="danger" onclick="delOperator('${esc(x.code)}')">Delete</button></td></tr>`).join('');
+ operatorRows.innerHTML=db.operators.map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.shift)}</td><td>${esc(x.inTime||'')}</td><td>${esc(x.outTime||'')}</td><td>${esc(x.phone)}</td><td><button class="danger" onclick="delOperator('${esc(x.code)}')">Delete</button></td></tr>`).join('');
  eOperator.innerHTML='<option value="">Select Operator</option>'+db.operators.map(x=>`<option value="${esc(x.code)}">${esc(x.code)} - ${esc(x.name)}</option>`).join('')
 }
 function renderInserts(){
@@ -390,7 +391,8 @@ function renderEntries(){
 }
 function renderDashboard(){
  const db=loadDB(),d=dashDate.value||today(),rows=db.entries.filter(x=>x.date===d);
- const used=rows.reduce((a,x)=>a+(+x.qty||0),0),val=rows.reduce((a,x)=>a+(+x.value||0),0),quality=rows.reduce((a,x)=>a+(+x.quality||0),0),reject=rows.reduce((a,x)=>a+(+x.reject||0),0);
+ const usedItems=rows.flatMap(entryInserts);
+ const used=usedItems.reduce((a,i)=>a+(+i.qty||0),0),val=usedItems.reduce((a,i)=>a+(+i.value||0),0),quality=rows.reduce((a,x)=>a+(+x.quality||0),0),reject=rows.reduce((a,x)=>a+(+x.reject||0),0);
  const totalAvailableBeforeToday=db.inserts.reduce((sum,it)=>{
    const stockin=db.stockIn.filter(s=>s.code===it.code).reduce((a,s)=>a+(+s.qty||0),0);
    const usedBefore=db.entries.filter(e=>e.date<d).reduce((sum,e)=>sum+entryInserts(e).filter(i=>i.code===it.code).reduce((a,i)=>a+(+i.qty||0),0),0);
@@ -414,7 +416,7 @@ function renderDashboard(){
  }
  shiftA.innerHTML=shiftBox('A');shiftB.innerHTML=shiftBox('B');
 
- const ops={};rows.forEach(x=>{const k=x.operatorCode;ops[k]??={name:x.operatorName,code:k,shift:x.shift,target:0,actual:0,qty:0,value:0};ops[k].target+=+x.target||0;ops[k].actual+=+x.actual||0;ops[k].qty+=+x.qty||0;ops[k].value+=+x.value||0});
+ const ops={};rows.forEach(x=>{const k=x.operatorCode||'UNKNOWN',ins=entryInserts(x),q=ins.reduce((a,i)=>a+(+i.qty||0),0),v=ins.reduce((a,i)=>a+(+i.value||0),0);ops[k]??={name:x.operatorName||'',code:k,shift:x.shift||'',target:0,actual:0,qty:0,value:0};ops[k].target+=+x.target||0;ops[k].actual+=+x.actual||0;ops[k].qty+=q;ops[k].value+=v});
  operatorPerf.innerHTML=Object.values(ops).map(x=>{const p=pct(x.actual,x.target);return `<tr><td>${esc(x.name)}</td><td>${esc(x.code)}</td><td>${x.shift}</td><td>${x.target.toFixed(1)}</td><td>${x.actual}</td><td class="${p>=100?'goodtxt':p>=80?'warntxt':'badtxt'}">${p.toFixed(1)}%</td><td>${x.qty}</td><td>${money(x.value)}</td></tr>`}).join('')||'<tr><td colspan="8" class="muted">No data for selected date</td></tr>';
 
  insertSummary.innerHTML=db.inserts.map(it=>{
@@ -458,7 +460,7 @@ function exportBackup(){
 }
 function importBackup(){
  const f=importFile.files[0];if(!f)return alert('Backup JSON file தேர்வு செய்யவும்.');
- const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.operators||!d.inserts||!d.entries)throw 0;saveDB(d);alert('Backup restored.');refreshAll()}catch(e){alert('Invalid backup file.')}};r.readAsText(f)
+ const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);saveDB(normalizeDB(d));alert('Backup restored.');refreshAll()}catch(e){alert('Invalid backup file.')}};r.readAsText(f)
 }
 function exportCSV(){
  const rows=loadDB().entries,heads=['Date','Operator Code','Operator Name','Shift','In Time','Out Time','Working Hours','Machine','Job','Target','Actual','Operator %','Insert 1','Qty 1','Insert 2','Qty 2','Insert 3','Qty 3','Insert 4','Qty 4','Insert 5','Qty 5','Insert 6','Qty 6','Total Insert Value','Quality Qty','Non-Quality Qty'];
@@ -466,7 +468,7 @@ function exportCSV(){
  const csv=[heads,...rows.map(x=>{const ins=entryInserts(x),a=[x.date,x.operatorCode,x.operatorName,x.shift,x.inTime||'',x.outTime||'',x.hours||0,x.machine,x.job,x.target,x.actual,x.percentage];for(let i=0;i<6;i++){a.push(ins[i]?.code||'',ins[i]?.qty||'')}a.push(x.value,x.quality,x.reject);return a})].map(r=>r.map(q).join(',')).join('\n');
  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='CNC_Insert_Manager_PRO_V23_Entries.csv';a.click();URL.revokeObjectURL(a.href)
 }
-function clearAll(){if(confirm('அனைத்து data-வும் delete ஆகும். தொடரவா?')){localStorage.removeItem(KEY);refreshAll()}}
+function clearAll(){if(confirm('அனைத்து data-வும் delete ஆகும். தொடரவா?')){saveDB(blankDB());refreshAll()}}
 let voiceRecorder=null,voiceChunks=[],voiceBlob=null;
 function renderMessageCenter(){
  const db=loadDB();
@@ -578,7 +580,7 @@ loadDeadlineSettingsUI();
 setInterval(()=>renderReportAlerts(),60000);
 
 function refreshAll(){renderOperators();renderInserts();renderEntries();renderDashboard();renderReportAlerts();renderMessageCenter();calcEntry()}
-dashDate.value=eDate.value=stockDate.value=today();eInPeriod.value='AM';eOutPeriod.value='PM';opInPeriod.value='AM';opOutPeriod.value='PM';refreshAll();
+dashDate.value=eDate.value=stockDate.value=today();eInPeriod.value='AM';eOutPeriod.value='PM';refreshAll();
 </script>
 
 <script>
@@ -604,7 +606,7 @@ dashDate.value=eDate.value=stockDate.value=today();eInPeriod.value='AM';eOutPeri
     });
     db.ref('cncManager/db').once('value').then(s=>{
       if(s.exists()){
-        localStorage.setItem(KEY, JSON.stringify(s.val()));
+        localStorage.setItem(KEY, JSON.stringify(normalizeDB(s.val())));
         refreshAll();
       } else {
         db.ref('cncManager/db').set(loadDB());
@@ -613,7 +615,7 @@ dashDate.value=eDate.value=stockDate.value=today();eInPeriod.value='AM';eOutPeri
 
     db.ref('cncManager/db').on('value',s=>{
       if(s.exists()){
-        localStorage.setItem(KEY, JSON.stringify(s.val()));
+        localStorage.setItem(KEY, JSON.stringify(normalizeDB(s.val())));
         refreshAll();
         setStatus('Cloud: LIVE');
       }
