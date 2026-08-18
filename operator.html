@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html lang="ta">
-<head>
+<html lang="ta"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#15324b">
 <title>CNC PRO V23 Multi-Job Operator</title>
-<link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="./operator-manifest.json">
 <style>
 :root{--bg:#f4f7fb;--card:#fff;--ink:#17212b;--muted:#64748b;--primary:#15324b;--good:#087f5b;--bad:#b42318;--line:#dbe3ec}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Tamil",sans-serif;background:var(--bg);color:var(--ink)}
@@ -20,20 +19,21 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
 .job-card h3{margin:0 0 10px;color:var(--primary)}.job-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .time-pair{display:grid;grid-template-columns:minmax(105px,1fr) 82px;gap:6px}.job-summary{margin-top:10px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #e2e8f0;font-size:13px}
 .session-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 8px;padding-top:10px;border-top:1px solid #dbe3ec}.session-head small{display:block;color:var(--muted);margin-top:3px}.session-add{background:#dbeafe;color:#0f5f99;font-weight:700;padding:9px 11px}.session-list{display:grid;gap:8px}.time-session{display:grid;grid-template-columns:80px minmax(210px,1fr) minmax(210px,1fr) 115px auto;gap:8px;align-items:end;padding:10px;border:1px solid #dbe3ec;border-radius:10px;background:#fff}.session-no{font-weight:700;color:var(--primary);align-self:center}.session-remove{background:#fff0f0;color:var(--bad);padding:10px}.active-hours{max-width:220px;margin-top:10px}.badtxt{color:var(--bad);font-weight:700}
+.quick-time{font-variant-numeric:tabular-nums;letter-spacing:.04em}.header-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.header-actions button{background:#fff;color:var(--primary);padding:8px 10px}.tablebox{overflow:auto;margin-top:14px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid #e5e7eb;text-align:left;white-space:nowrap}th{background:#f8fafc}.edit-note{display:none;background:#fff7e6;color:#8a4b00}.edit-note.active{display:block}
 @media(max-width:760px){.job-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){.time-session{grid-template-columns:80px repeat(2,minmax(180px,1fr));}.time-session .session-hours-wrap{grid-column:2}.time-session .session-remove{grid-column:3}}
 @media(max-width:650px){.formgrid,.insgrid,.job-grid{grid-template-columns:1fr}.time-pair{grid-template-columns:minmax(0,1fr) 82px}.session-head{align-items:flex-start;flex-direction:column}.time-session{grid-template-columns:1fr}.time-session .session-hours-wrap,.time-session .session-remove{grid-column:auto}.session-remove{width:100%}.active-hours{max-width:none}}
 </style>
-<script src="./access-config.js"></script>
-<script src="./access-control.js"></script>
-<script>window.CNCAuth.guard('operator');</script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
 <script src="./firebase-config.js"></script>
+<script src="./access-config.js"></script>
+<script src="./access-control.js"></script>
+<script>window.CNCAuth.guard('operator');</script>
 </head>
 <body>
-<header><h1>CNC Daily Operator Report — Multi-Job</h1><small>Operator Secure Login • Entry Page Only • 12-hour AM/PM Time</small></header>
+<header><h1>CNC Daily Operator Report — Multi-Job</h1><small>Operator Secure Login • Entry Page Only • 12-hour AM/PM Time</small><div class="header-actions"><button onclick="CNCAuth.openPasswordDialog('operator','operator')">Change Password</button><button onclick="CNCAuth.logout('operator')">Logout</button></div></header>
 <div class="container">
 <div class="card">
   <div id="status" class="notice">Cloud connection checking...</div>
@@ -56,7 +56,7 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
       </div>
       <div class="session-head"><div><b>Job 1 Work Sessions</b><small>Lunch / break செல்லும் போது Out; திரும்ப வந்ததும் புதிய session In சேர்க்கவும்.</small></div><button class="session-add" type="button" onclick="addSessionRow(1)">+ Resume / Add Session</button></div>
       <div id="eJob1Sessions" class="session-list"></div>
-      <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob1Hours" readonly></div>
+      <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob1Hours" readonly=""></div>
       <div id="eJob1Calc" class="job-summary">Job 1 Target / Percentage automatic.</div>
     </div>
     <div class="job-card">
@@ -69,7 +69,7 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
       </div>
       <div class="session-head"><div><b>Job 2 Work Sessions</b><small>ஒவ்வொரு வேலை தொடர்ச்சிக்கும் தனி In / Out session.</small></div><button class="session-add" type="button" onclick="addSessionRow(2)">+ Resume / Add Session</button></div>
       <div id="eJob2Sessions" class="session-list"></div>
-      <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob2Hours" readonly></div>
+      <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob2Hours" readonly=""></div>
       <div id="eJob2Calc" class="job-summary">Job 2 Target / Percentage automatic.</div>
     </div>
     <div class="job-card">
@@ -82,7 +82,7 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
       </div>
       <div class="session-head"><div><b>Job 3 Work Sessions</b><small>ஒவ்வொரு வேலை தொடர்ச்சிக்கும் தனி In / Out session.</small></div><button class="session-add" type="button" onclick="addSessionRow(3)">+ Resume / Add Session</button></div>
       <div id="eJob3Sessions" class="session-list"></div>
-      <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob3Hours" readonly></div>
+      <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob3Hours" readonly=""></div>
       <div id="eJob3Calc" class="job-summary">Job 3 Target / Percentage automatic.</div>
     </div>
   </div>
@@ -93,7 +93,14 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
   <h3>Job Inserts (maximum 6)</h3>
   <div class="insgrid" id="insertGrid"></div>
   <div class="notice" id="calc">Target / Operator % / Insert Value automatic.</div>
+  <div id="operatorEditNote" class="notice edit-note">Editing report — Update Daily Report அழுத்தினால் பழைய report மாற்றப்படும்.</div>
   <button class="good" id="sendBtn">Send Daily Report</button>
+  <button id="cancelEditBtn" type="button" style="display:none" onclick="cancelReportEdit()">Cancel Edit</button>
+</div>
+<div class="card tablebox">
+  <h2>My Recent Reports / Edit</h2>
+  <div id="myReportHint" class="notice">Operator பெயரை தேர்வு செய்தால் அந்த Operator-ன் recent reports மட்டும் தெரியும்.</div>
+  <table><thead><tr><th>Date</th><th>Operator</th><th>Jobs</th><th>First In</th><th>Last Out</th><th>Net Work</th><th>Actual</th><th></th></tr></thead><tbody id="myReportRows"><tr><td colspan="8">Operator தேர்வு செய்யவும்.</td></tr></tbody></table>
 </div>
 </div>
 <script>
@@ -103,23 +110,20 @@ const statusEl=document.getElementById('status');
 const today=()=>{const d=new Date(),z=d.getTimezoneOffset()*60000;return new Date(d-z).toISOString().slice(0,10)};
 const asArray=v=>Array.isArray(v)?v:Object.values(v||{}).filter(Boolean);
 function normalizeMaster(d){d=(d&&typeof d==='object')?d:{};return {operators:asArray(d.operators),inserts:asArray(d.inserts),entries:asArray(d.entries),stockIn:asArray(d.stockIn)}}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 
 eDate.value=today();
 
-function build12HourOptions(){
-  let html='<option value="">Select Time</option>';
-  for(let h=1;h<=12;h++){
-    for(let m=0;m<60;m++){
-      const hh=String(h).padStart(2,'0');
-      const mm=String(m).padStart(2,'0');
-      html+=`<option value="${hh}:${mm}">${h}:${mm}</option>`;
-    }
-  }
-  return html;
+function normalize12(t){
+  t=String(t||'').trim().replace('.',':');const digits=t.replace(/\D/g,'');
+  if(!t.includes(':')&&/^\d{3,4}$/.test(digits))t=digits.slice(0,-2)+':'+digits.slice(-2);
+  const m=t.match(/^(\d{1,2})(?::(\d{1,2}))?$/);if(!m)return '';
+  const h=+m[1],min=+(m[2]||0);if(h<1||h>12||min<0||min>59)return '';
+  return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0')
 }
-const TIME_OPTIONS_HTML=build12HourOptions();
+function quickTimeInput(cls,label){return `<input class="${cls} quick-time" type="text" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="${label||'HH:MM'}">`}
 function time24(v,ap){
-  if(!v)return '';
+  v=normalize12(v);if(!v)return '';
   let [h,m]=v.split(':').map(Number);
   if(ap==='AM' && h===12)h=0;
   if(ap==='PM' && h<12)h+=12;
@@ -139,14 +143,15 @@ function updateSessionLabels(n){
 function addSessionRow(n,data={},skipCalc=false){
   const list=jobField(n,'Sessions'),row=document.createElement('div');row.className='time-session';
   row.innerHTML=`<div class="session-no"></div>
-    <div><label>In Time (12 Hour)</label><div class="time-pair"><select class="session-in-time">${TIME_OPTIONS_HTML}</select><select class="session-in-ap"><option>AM</option><option>PM</option></select></div></div>
-    <div><label>Out Time (12 Hour)</label><div class="time-pair"><select class="session-out-time">${TIME_OPTIONS_HTML}</select><select class="session-out-ap"><option>AM</option><option>PM</option></select></div></div>
+    <div><label>In Time (12 Hour)</label><div class="time-pair">${quickTimeInput('session-in-time','09:00')}<select class="session-in-ap"><option>AM</option><option>PM</option></select></div></div>
+    <div><label>Out Time (12 Hour)</label><div class="time-pair">${quickTimeInput('session-out-time','05:30')}<select class="session-out-ap"><option>AM</option><option>PM</option></select></div></div>
     <div class="session-hours-wrap"><label>Session Hours</label><input class="session-hours" readonly></div>
     <button class="session-remove" type="button">Remove</button>`;
   const in12=from24(data.inTime),out12=from24(data.outTime);
   row.querySelector('.session-in-time').value=in12.time;row.querySelector('.session-in-ap').value=in12.time?in12.period:(data.inAP||'AM');
   row.querySelector('.session-out-time').value=out12.time;row.querySelector('.session-out-ap').value=out12.time?out12.period:(data.outAP||'PM');
-  row.querySelectorAll('select').forEach(el=>{el.addEventListener('input',calc);el.addEventListener('change',calc)});
+  row.querySelectorAll('input,select').forEach(el=>{if(!el.classList.contains('session-hours')){el.addEventListener('input',calc);el.addEventListener('change',calc)}});
+  row.querySelectorAll('.quick-time').forEach(el=>el.addEventListener('blur',()=>{const t=normalize12(el.value);if(t)el.value=t;calc()}));
   row.querySelector('.session-remove').addEventListener('click',()=>removeSessionRow(n,row));
   list.appendChild(row);updateSessionLabels(n);if(!skipCalc)calc();
 }
@@ -213,6 +218,39 @@ function operatorTimeline(jobs){
   else if(best.overlapPair){const [a,b]=best.overlapPair;validationError=`Job ${a.jobNumber} Session ${a.sessionNumber} மற்றும் Job ${b.jobNumber} Session ${b.sessionNumber} நேரங்கள் overlap ஆகின்றன.`}
   return {sessions:best.sessions,inTime:best.first.inTime,outTime:best.last.outTime,presenceMinutes:best.presenceMinutes,activeMinutes:best.activeMinutes,breakMinutes:Math.max(0,best.presenceMinutes-best.activeMinutes),validationError}
 }
+function entryJobs(x){
+  const jobs=asArray(x?.jobs).filter(Boolean).slice(0,3);if(jobs.length)return jobs;
+  if(x&&(x.job||x.inTime||x.outTime))return [{number:1,name:x.job||'',partNo:x.partNo||'',cycle:+x.cycle||0,actual:+x.actual||0,sessions:x.inTime&&x.outTime?[{inTime:x.inTime,outTime:x.outTime,hours:+x.hours||0}]:[]}];
+  return []
+}
+function entryInserts(x){const a=asArray(x?.inserts).filter(i=>i&&i.code);return a.length?a:(x?.insertCode?[{code:x.insertCode,qty:+x.qty||0}]:[])}
+function reportHours(x){const n=Number(x?.netWorkHours??x?.hours);return Number.isFinite(n)?n:0}
+let editingReportId=null,editingSourceId='';
+function renderMyReports(){
+  const code=eOperator.value;if(!code){myReportHint.textContent='Operator பெயரை தேர்வு செய்தால் அந்த Operator-ன் recent reports மட்டும் தெரியும்.';myReportRows.innerHTML='<tr><td colspan="8">Operator தேர்வு செய்யவும்.</td></tr>';return}
+  const rows=master.entries.filter(x=>x&&x.operatorCode===code).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||(+b.id||0)-(+a.id||0)).slice(0,20);
+  myReportHint.textContent=`${rows.length} recent report(s) — Edit அழுத்தி தவறை திருத்தலாம்.`;
+  myReportRows.innerHTML=rows.map((x,i)=>`<tr><td>${esc(x.date||'')}</td><td>${esc(x.operatorName||'')}</td><td>${esc(entryJobs(x).map(j=>j.name).filter(Boolean).join(' / '))}</td><td>${esc(format12(x.inTime||entryJobs(x)[0]?.inTime||''))}</td><td>${esc(format12(x.outTime||entryJobs(x).at(-1)?.outTime||''))}</td><td>${reportHours(x).toFixed(2)} h</td><td>${+x.actual||0}</td><td><button class="primary report-edit" data-index="${i}">Edit</button></td></tr>`).join('')||'<tr><td colspan="8">இந்த Operator-க்கு report இல்லை.</td></tr>';
+  myReportRows.querySelectorAll('.report-edit').forEach(btn=>btn.addEventListener('click',()=>editMyReport(rows[+btn.dataset.index])));
+}
+function editMyReport(x){
+  if(!x||x.operatorCode!==eOperator.value)return alert('இந்த report-ஐ edit செய்ய Operator பெயரை சரியாக தேர்வு செய்யவும்.');
+  eDate.value=x.date||today();eShift.value=x.shift||'A';eMachine.value=x.machine||'';
+  const jobs=entryJobs(x);for(let n=1;n<=3;n++){
+    const j=jobs[n-1];jobField(n,'Name').value=j?.name||'';jobField(n,'PartNo').value=j?.partNo||'';jobField(n,'Cycle').value=j?.cycle||'';jobField(n,'Actual').value=j?.actual||'';
+    jobField(n,'Sessions').innerHTML='';const sessions=asArray(j?.sessions).filter(Boolean);(sessions.length?sessions:[{}]).forEach(s=>addSessionRow(n,s,true))
+  }
+  const ins=entryInserts(x);for(let i=1;i<=6;i++){const z=ins[i-1];document.getElementById('ins'+i).value=z?.code||'';document.getElementById('qty'+i).value=z?.qty||''}
+  eQuality.value=x.quality||'';eReject.value=x.reject||'';editingReportId=x.id??null;editingSourceId=x.sourceId||'';
+  sendBtn.textContent='Update Daily Report';cancelEditBtn.style.display='inline-block';operatorEditNote.classList.add('active');calc();window.scrollTo({top:0,behavior:'smooth'})
+}
+function resetReportForm(){
+  ['eMachine','eQuality','eReject'].forEach(id=>document.getElementById(id).value='');
+  for(let n=1;n<=3;n++){['Name','PartNo','Cycle','Actual','Hours'].forEach(s=>jobField(n,s).value='');resetJobSessions(n,true)}
+  for(let i=1;i<=6;i++){document.getElementById('ins'+i).value='';document.getElementById('qty'+i).value=''}
+  editingReportId=null;editingSourceId='';sendBtn.textContent='Send Daily Report';cancelEditBtn.style.display='none';operatorEditNote.classList.remove('active');calc()
+}
+function cancelReportEdit(){resetReportForm()}
 for(let n=1;n<=3;n++){
   resetJobSessions(n,true);
   ['Name','PartNo','Cycle','Actual'].forEach(s=>{
@@ -221,18 +259,18 @@ for(let n=1;n<=3;n++){
 }
 
 function renderMaster(){
-  eOperator.innerHTML='<option value="">Select Operator</option>'+master.operators.map(o=>`<option value="${o.code}">${o.code} - ${o.name}</option>`).join('');
+  eOperator.innerHTML='<option value="">Select Operator</option>'+master.operators.map(o=>`<option value="${esc(o.code)}">${esc(o.code)} - ${esc(o.name)}</option>`).join('');
   insertGrid.innerHTML='';
   for(let i=1;i<=6;i++){
     const wrap=document.createElement('div');
-    wrap.innerHTML=`<label>Insert ${i}</label><select id="ins${i}"><option value="">Select Insert</option>${master.inserts.map(x=>`<option value="${x.code}">${x.name} - ${x.code}</option>`).join('')}</select><label style="margin-top:6px">Insert ${i} Qty</label><input id="qty${i}" type="number" min="0" step="1">`;
+    wrap.innerHTML=`<label>Insert ${i}</label><select id="ins${i}"><option value="">Select Insert</option>${master.inserts.map(x=>`<option value="${esc(x.code)}">${esc(x.name)} - ${esc(x.code)}</option>`).join('')}</select><label style="margin-top:6px">Insert ${i} Qty</label><input id="qty${i}" type="number" min="0" step="1">`;
     insertGrid.appendChild(wrap);
   }
   for(let i=1;i<=6;i++){document.getElementById('ins'+i).addEventListener('input',calc);document.getElementById('qty'+i).addEventListener('input',calc);}
 }
 eOperator.addEventListener('change',()=>{
   const op=master.operators.find(x=>x.code===eOperator.value);
-  if(op)eShift.value=op.shift||'A'; operatorReportStatus();
+  if(op)eShift.value=op.shift||'A'; operatorReportStatus();renderMyReports();
 });
 
 function calc(){
@@ -311,6 +349,21 @@ async function enableOperatorAlerts(){
   operatorReportStatus();
 }
 
+async function syncOperatorEntry(entry){
+  try{
+    await cloudDB.ref('cncManager/db/entries').transaction(raw=>{
+      const entries=asArray(raw),i=entries.findIndex(x=>x&&((entry.sourceId&&x.sourceId===entry.sourceId)||String(x.id)===String(entry.id)));
+      if(i>=0)entries[i]={...entries[i],...entry};else entries.push(entry);
+      return entries
+    });
+    return 'direct'
+  }catch(directError){
+    console.warn('Direct entry sync failed; using pending queue',directError);
+    await cloudDB.ref('cncManager/operatorSubmissions').push(entry);
+    return 'queue'
+  }
+}
+
 async function sendReport(){
   if(!cloudDB)return alert('Cloud connection இல்லை. Firebase setup check செய்யவும்.');
   const op=master.operators.find(x=>x.code===eOperator.value);
@@ -335,29 +388,24 @@ async function sendReport(){
   if(!inserts.length)return alert('குறைந்தது ஒரு Insert மற்றும் Qty கொடுக்கவும்.');
   const quality=+eQuality.value||0,reject=+eReject.value||0;
   if(quality+reject>c.qty)return alert('Quality + Non-Quality Qty, Total Used Qty-ஐ விட அதிகமாக இருக்கக்கூடாது.');
-  const sourceId='OP-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+  const now=Date.now(),sourceId=editingSourceId||('OP-'+now+'-'+Math.random().toString(36).slice(2,8));
   const entry={
-    id:Date.now(),sourceId,date:eDate.value,operatorCode:op.code,operatorName:op.name,shift:eShift.value,
+    id:editingReportId??now,sourceId,date:eDate.value,operatorCode:op.code,operatorName:op.name,shift:eShift.value,
     machine:eMachine.value.trim(),jobs,
     inTime:c.timeline.inTime,outTime:c.timeline.outTime,presenceHours:c.presenceHours,breakMinutes:c.breakMinutes,netWorkHours:c.hrs,
     job:jobs.map(j=>j.name).join(' / '),partNo:jobs.map(j=>j.partNo).filter(Boolean).join(' / '),cycle:jobs[0].cycle,
     hours:c.hrs,target:c.target,actual:c.actual,percentage:c.pct,
     inserts,insertCode:inserts[0].code,insertName:inserts[0].name,qty:c.qty,unitValue:inserts[0].unitValue,value:c.val,
-    quality,reject,submittedAt:new Date().toISOString()
+    quality,reject,submittedAt:editingReportId===null?new Date().toISOString():undefined,updatedAt:new Date().toISOString()
   };
+  if(entry.submittedAt===undefined)delete entry.submittedAt;
   sendBtn.disabled=true; sendBtn.textContent='Sending...';
   try{
-    await cloudDB.ref('cncManager/operatorSubmissions').push(entry);
-    statusEl.className='notice ok';statusEl.textContent='Report sent successfully. Admin Dashboard-ல் சேர்க்கப்பட்டது.';
-    ['eMachine','eQuality','eReject'].forEach(id=>document.getElementById(id).value='');
-    for(let n=1;n<=3;n++){
-      ['Name','PartNo','Cycle','Actual','Hours'].forEach(s=>jobField(n,s).value='');
-      resetJobSessions(n,true)
-    }
-    for(let i=1;i<=6;i++){document.getElementById('ins'+i).value='';document.getElementById('qty'+i).value='';}
-    calc();
+    const mode=await syncOperatorEntry(entry);
+    statusEl.className='notice ok';statusEl.textContent=mode==='direct'?'Report synced successfully — Admin Dashboard-ல் உடனே சேர்க்கப்பட்டது.':'Report sent — Admin திறந்தவுடன் pending report sync ஆகும்.';
+    resetReportForm();
   }catch(e){statusEl.className='notice err';statusEl.textContent='Send failed: '+e.message}
-  finally{sendBtn.disabled=false;sendBtn.textContent='Send Daily Report';}
+  finally{sendBtn.disabled=false;sendBtn.textContent=editingReportId===null?'Send Daily Report':'Update Daily Report';}
 }
 sendBtn.addEventListener('click',sendReport);
 eDate.addEventListener('change',operatorReportStatus);
@@ -377,7 +425,7 @@ if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey){
         const saved=localStorage.getItem('cnc_operator_code');
         if(saved && [...eOperator.options].some(x=>x.value===saved)){eOperator.value=saved;const op=master.operators.find(x=>x.code===saved);if(op)eShift.value=op.shift||'A';}
         statusEl.className='notice ok';statusEl.textContent='Cloud LIVE — report ready';
-        operatorReportStatus();
+        operatorReportStatus();renderMyReports();
       }
       else{statusEl.textContent='Admin master data இன்னும் upload ஆகவில்லை.'}
     },e=>{statusEl.className='notice err';statusEl.textContent='Cloud permission/error';});
@@ -405,5 +453,6 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('operator')){
 })();
 }
 </script>
-</body>
-</html>
+
+
+</body></html>

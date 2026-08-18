@@ -1,8 +1,8 @@
 {
-  "id": "./operator-app",
+  "id": "./operator-app-v28",
   "name": "CNC PRO V23 Operator",
   "short_name": "CNC Operator",
-  "description": "CNC Insert Manager PRO V23 - Operator Daily Report",
+  "description": "CNC Multi-Job Operator Daily Entry",
   "start_url": "./operator.html",
   "scope": "./",
   "display": "standalone",

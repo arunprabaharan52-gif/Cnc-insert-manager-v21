@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="ta">
-<head>
+<html lang="ta"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#15324b">
@@ -34,18 +33,19 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
 .job-card h3{margin:0 0 10px;color:var(--primary)}.job-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .time-pair{display:grid;grid-template-columns:minmax(105px,1fr) 82px;gap:6px}.job-summary{margin-top:10px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #e2e8f0;font-size:13px}
 .session-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 8px;padding-top:10px;border-top:1px solid #dbe3ec}.session-head small{display:block;color:var(--muted);margin-top:3px}.session-add{background:#dbeafe;color:#0f5f99;font-weight:700;padding:9px 11px}.session-list{display:grid;gap:8px}.time-session{display:grid;grid-template-columns:80px minmax(210px,1fr) minmax(210px,1fr) 115px auto;gap:8px;align-items:end;padding:10px;border:1px solid #dbe3ec;border-radius:10px;background:#fff}.session-no{font-weight:700;color:var(--primary);align-self:center}.session-remove{background:#fff0f0;color:var(--bad);padding:10px}.active-hours{max-width:220px;margin-top:10px}.session-cell{white-space:normal;min-width:260px;line-height:1.55}
+.quick-time{font-variant-numeric:tabular-nums;letter-spacing:.04em}.search-panel{margin:10px 0 14px}.search-count{align-self:end;padding:10px;color:var(--muted);font-weight:700}.edit-banner{display:none;background:#fff7e6;color:#8a4b00}.edit-banner.active{display:block}
 @media(max-width:850px){.job-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:1000px){.time-session{grid-template-columns:80px repeat(2,minmax(180px,1fr));}.time-session .session-hours-wrap{grid-column:2}.time-session .session-remove{grid-column:3}}
 @media(max-width:560px){.job-grid{grid-template-columns:1fr}.time-pair{grid-template-columns:minmax(0,1fr) 82px}.session-head{align-items:flex-start;flex-direction:column}.time-session{grid-template-columns:1fr}.time-session .session-hours-wrap,.time-session .session-remove{grid-column:auto}.session-remove{width:100%}.active-hours{max-width:none}}
 </style>
 
-<script src="./access-config.js"></script>
-<script src="./access-control.js"></script>
-<script>window.CNCAuth.guard('admin');</script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
 <script src="./firebase-config.js"></script>
+<script src="./access-config.js"></script>
+<script src="./access-control.js"></script>
+<script>window.CNCAuth.guard('admin');</script>
 <link rel="manifest" href="./manifest.json">
 
 </head>
@@ -60,6 +60,9 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
     <button onclick="showPage('inserts')">Insert Master / Stock</button>
     <button onclick="showPage('messages')">Messages / Photos</button>
     <button onclick="showPage('backup')">Backup</button>
+    <button onclick="CNCAuth.openPasswordDialog('admin','admin')">Change Admin Password</button>
+    <button onclick="CNCAuth.openPasswordDialog('operator','admin')">Change Operator Password</button>
+    <button onclick="CNCAuth.logout('admin')">Logout</button>
   </nav>
 </header>
 
@@ -141,7 +144,7 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
         </div>
         <div class="session-head"><div><b>Job 1 Work Sessions</b><small>Lunch / break செல்லும் போது Out; திரும்ப வந்ததும் புதிய session In சேர்க்கவும்.</small></div><button class="session-add" type="button" onclick="addSessionRow(1)">+ Resume / Add Session</button></div>
         <div id="eJob1Sessions" class="session-list"></div>
-        <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob1Hours" readonly></div>
+        <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob1Hours" readonly=""></div>
         <div id="eJob1Calc" class="job-summary">Job 1 Target / Percentage automatic.</div>
       </div>
       <div class="job-card">
@@ -154,7 +157,7 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
         </div>
         <div class="session-head"><div><b>Job 2 Work Sessions</b><small>ஒவ்வொரு வேலை தொடர்ச்சிக்கும் தனி In / Out session.</small></div><button class="session-add" type="button" onclick="addSessionRow(2)">+ Resume / Add Session</button></div>
         <div id="eJob2Sessions" class="session-list"></div>
-        <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob2Hours" readonly></div>
+        <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob2Hours" readonly=""></div>
         <div id="eJob2Calc" class="job-summary">Job 2 Target / Percentage automatic.</div>
       </div>
       <div class="job-card">
@@ -167,7 +170,7 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
         </div>
         <div class="session-head"><div><b>Job 3 Work Sessions</b><small>ஒவ்வொரு வேலை தொடர்ச்சிக்கும் தனி In / Out session.</small></div><button class="session-add" type="button" onclick="addSessionRow(3)">+ Resume / Add Session</button></div>
         <div id="eJob3Sessions" class="session-list"></div>
-        <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob3Hours" readonly></div>
+        <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob3Hours" readonly=""></div>
         <div id="eJob3Calc" class="job-summary">Job 3 Target / Percentage automatic.</div>
       </div>
     </div>
@@ -190,10 +193,21 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
       <div><label>Non-Quality / Rejected Qty</label><input id="eReject" type="number" min="0" step="1"></div>
     </div>
     <div class="notice" id="entryCalc">Target / Operator % / Insert Value will calculate automatically.</div>
-    <div class="actions"><button class="good" onclick="saveEntry()">Save Entry</button><button onclick="clearEntry()">Clear</button></div>
+    <div id="entryEditBanner" class="notice edit-banner">Editing saved entry — Update Entry அழுத்தினால் பழைய entry மாற்றப்படும்.</div>
+    <div class="actions"><button class="good" id="saveEntryBtn" onclick="saveEntry()">Save Entry</button><button onclick="clearEntry()">Clear</button><button id="cancelEntryEditBtn" style="display:none" onclick="cancelEntryEdit()">Cancel Edit</button></div>
   </div>
 
   <h3 class="sectiontitle">Saved Entries</h3>
+  <div class="card search-panel">
+    <div class="formgrid">
+      <div><label>Quick Search</label><input id="entrySearch" placeholder="Operator name/code, Job, Part No, Machine"></div>
+      <div><label>Operator Filter</label><select id="entryOperatorFilter"><option value="">All Operators</option></select></div>
+      <div><label>From Date</label><input id="entryDateFrom" type="date"></div>
+      <div><label>To Date</label><input id="entryDateTo" type="date"></div>
+      <div class="search-count" id="entrySearchCount">0 entries</div>
+    </div>
+    <div class="actions"><button onclick="clearEntrySearch()">Clear Search</button></div>
+  </div>
   <div class="card tablebox">
     <table><thead><tr><th>Date</th><th>Operator</th><th>Shift</th><th>Machine</th><th>First In</th><th>Last Out</th><th>Total Presence</th><th>Actual Break</th><th>Net Active Work</th><th>Job 1</th><th>Sessions 1 (12H)</th><th>Active Hours 1</th><th>Job 2</th><th>Sessions 2 (12H)</th><th>Active Hours 2</th><th>Job 3</th><th>Sessions 3 (12H)</th><th>Active Hours 3</th><th>Total Target</th><th>Total Actual</th><th>%</th><th>Insert 1</th><th>Insert 2</th><th>Insert 3</th><th>Insert 4</th><th>Insert 5</th><th>Insert 6</th><th>Total Value</th><th>Quality</th><th>Non-Quality</th><th></th></tr></thead><tbody id="entryRows"></tbody></table>
   </div>
@@ -268,13 +282,13 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
         <label>Voice Message</label>
         <div class="actions" style="margin-top:0">
           <button class="good" id="voiceStart" onclick="startVoice()">Start Recording</button>
-          <button class="danger" id="voiceStop" onclick="stopVoice()" disabled>Stop</button>
+          <button class="danger" id="voiceStop" onclick="stopVoice()" disabled="">Stop</button>
         </div>
         <small id="voiceStatus" class="muted">No voice recorded</small>
       </div>
     </div>
     <div id="photoPreview" style="margin-top:12px"></div>
-    <audio id="voicePreview" controls style="width:100%;margin-top:12px;display:none"></audio>
+    <audio id="voicePreview" controls="" style="width:100%;margin-top:12px;display:none"></audio>
     <div class="actions">
       <button class="primary" onclick="shareMessage()">Share Text / Photo / Voice</button>
       <button onclick="sendSMSSelected()">SMS Selected Operators</button>
@@ -373,6 +387,8 @@ function currentStock(db,code){
 }
 function normalize12(t){
  t=String(t||'').trim().replace('.',':');
+ const digits=t.replace(/\D/g,'');
+ if(!t.includes(':')&&/^\d{3,4}$/.test(digits))t=digits.slice(0,-2)+':'+digits.slice(-2);
  const m=t.match(/^(\d{1,2})(?::(\d{1,2}))?$/);if(!m)return '';
  let h=+m[1],min=+(m[2]||0);if(h<1||h>12||min<0||min>59)return '';
  return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0')
@@ -401,15 +417,7 @@ function selectedEntryInserts(db){
  }
  return arr
 }
-function build12HourOptions(){
- let html='<option value="">Select Time</option>';
- for(let h=1;h<=12;h++)for(let m=0;m<60;m++){
-  const hh=String(h).padStart(2,'0'),mm=String(m).padStart(2,'0');
-  html+=`<option value="${hh}:${mm}">${h}:${mm}</option>`
- }
- return html
-}
-const TIME_OPTIONS_HTML=build12HourOptions();
+function quickTimeInput(cls,label){return `<input class="${cls} quick-time" type="text" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="${label||'HH:MM'}">`}
 function minuteOfDay(t){if(!t)return 0;const [h,m]=t.split(':').map(Number);return h*60+m}
 function operatorTimeline(jobs){
  const source=[];
@@ -454,14 +462,15 @@ function updateSessionLabels(n){
 function addSessionRow(n,data={},skipCalc=false){
  const list=jobField(n,'Sessions'),row=document.createElement('div');row.className='time-session';
  row.innerHTML=`<div class="session-no"></div>
-  <div><label>In Time (12 Hour)</label><div class="time-pair"><select class="session-in-time">${TIME_OPTIONS_HTML}</select><select class="session-in-ap"><option>AM</option><option>PM</option></select></div></div>
-  <div><label>Out Time (12 Hour)</label><div class="time-pair"><select class="session-out-time">${TIME_OPTIONS_HTML}</select><select class="session-out-ap"><option>AM</option><option>PM</option></select></div></div>
+  <div><label>In Time (12 Hour)</label><div class="time-pair">${quickTimeInput('session-in-time','09:00')}<select class="session-in-ap"><option>AM</option><option>PM</option></select></div></div>
+  <div><label>Out Time (12 Hour)</label><div class="time-pair">${quickTimeInput('session-out-time','05:30')}<select class="session-out-ap"><option>AM</option><option>PM</option></select></div></div>
   <div class="session-hours-wrap"><label>Session Hours</label><input class="session-hours" readonly></div>
   <button class="session-remove" type="button">Remove</button>`;
  const in12=from24(data.inTime),out12=from24(data.outTime);
  row.querySelector('.session-in-time').value=in12.time;row.querySelector('.session-in-ap').value=in12.time?in12.period:(data.inAP||'AM');
  row.querySelector('.session-out-time').value=out12.time;row.querySelector('.session-out-ap').value=out12.time?out12.period:(data.outAP||'PM');
- row.querySelectorAll('select').forEach(el=>{el.addEventListener('input',calcEntry);el.addEventListener('change',calcEntry)});
+ row.querySelectorAll('input,select').forEach(el=>{if(!el.classList.contains('session-hours')){el.addEventListener('input',calcEntry);el.addEventListener('change',calcEntry)}});
+ row.querySelectorAll('.quick-time').forEach(el=>el.addEventListener('blur',()=>{const t=normalize12(el.value);if(t)el.value=t;calcEntry()}));
  row.querySelector('.session-remove').addEventListener('click',()=>removeSessionRow(n,row));
  list.appendChild(row);updateSessionLabels(n);if(!skipCalc)calcEntry()
 }
@@ -543,6 +552,15 @@ function addStock(){
  if(!code||qty<=0)return alert('Insert மற்றும் Stock In Qty கொடுக்கவும்.');
  db.stockIn.push({id:Date.now(),date:stockDate.value||today(),code,qty});saveDB(db);stockQty.value='';refreshAll()
 }
+let editingEntryId=null;
+function availableStockForEntry(db,code){
+ let available=currentStock(db,code);
+ if(editingEntryId!==null){
+  const old=db.entries.find(x=>String(x.id)===String(editingEntryId));
+  if(old)available+=entryInserts(old).filter(i=>i.code===code).reduce((a,i)=>a+(+i.qty||0),0)
+ }
+ return available
+}
 function saveEntry(){
  const db=loadDB(),op=db.operators.find(x=>x.code===eOperator.value);
  if(!eDate.value||!op)return alert('Date மற்றும் Operator தேர்வு செய்யவும்.');
@@ -559,17 +577,21 @@ function saveEntry(){
  if(!ins.length)return alert('குறைந்தது Insert 1 தேர்வு செய்யவும்.');
  if(ins.some(i=>i.qty<=0))return alert('தேர்வு செய்த ஒவ்வொரு Insert-க்கும் Qty கொடுக்கவும்.');
  const need={};ins.forEach(i=>need[i.code]=(need[i.code]||0)+i.qty);
- for(const [code,qty] of Object.entries(need))if(currentStock(db,code)<qty)return alert(code+' Stock போதவில்லை. முதலில் Stock In சேர்க்கவும்.');
+ for(const [code,qty] of Object.entries(need))if(availableStockForEntry(db,code)<qty)return alert(code+' Stock போதவில்லை. முதலில் Stock In சேர்க்கவும்.');
  const totalQty=ins.reduce((a,i)=>a+i.qty,0),totalValue=ins.reduce((a,i)=>a+i.value,0),q=+eQuality.value||0,r=+eReject.value||0;
  if(q+r>totalQty)return alert('Quality + Non-Quality Qty, Total Used Qty-ஐ விட அதிகமாக இருக்கக்கூடாது.');
  const hrs=c.hrs,t=c.target,actual=c.actual,first=ins[0];
- db.entries.push({
-  id:Date.now(),date:eDate.value,operatorCode:op.code,operatorName:op.name,shift:eShift.value,machine:eMachine.value.trim(),jobs,
+ const existingIndex=editingEntryId===null?-1:db.entries.findIndex(x=>String(x.id)===String(editingEntryId));
+ const existing=existingIndex>=0?db.entries[existingIndex]:{};
+ const record={...existing,
+  id:existing.id??Date.now(),date:eDate.value,operatorCode:op.code,operatorName:op.name,shift:eShift.value,machine:eMachine.value.trim(),jobs,
   inTime:c.timeline.inTime,outTime:c.timeline.outTime,presenceHours:c.presenceHours,breakMinutes:c.breakMinutes,netWorkHours:hrs,
   job:jobs.map(j=>j.name).join(' / '),partNo:jobs.map(j=>j.partNo).filter(Boolean).join(' / '),cycle:jobs[0].cycle,
-  hours:hrs,target:t,actual,percentage:pct(actual,t),inserts:ins,insertCode:first.code,insertName:first.name,qty:totalQty,unitValue:first.unitValue,value:totalValue,quality:q,reject:r
- });
- saveDB(db);alert('Entry saved successfully.');clearEntry();refreshAll()
+  hours:hrs,target:t,actual,percentage:pct(actual,t),inserts:ins,insertCode:first.code,insertName:first.name,qty:totalQty,unitValue:first.unitValue,value:totalValue,quality:q,reject:r,
+  updatedAt:new Date().toISOString()
+ };
+ if(existingIndex>=0)db.entries[existingIndex]=record;else db.entries.push(record);
+ saveDB(db);alert(existingIndex>=0?'Entry updated successfully.':'Entry saved successfully.');clearEntry();refreshAll()
 }
 function clearEntry(){
  eMachine.value=eQuality.value=eReject.value='';
@@ -578,7 +600,22 @@ function clearEntry(){
   resetJobSessions(n,true)
  }
  for(let n=1;n<=6;n++){document.getElementById('eInsert'+n).value='';document.getElementById('eQty'+n).value=''}
+ editingEntryId=null;saveEntryBtn.textContent='Save Entry';cancelEntryEditBtn.style.display='none';entryEditBanner.classList.remove('active');
  eShift.dataset.touched='';calcEntry()
+}
+function cancelEntryEdit(){clearEntry()}
+function editEntry(id){
+ const db=loadDB(),x=db.entries.find(e=>String(e.id)===String(id));if(!x)return alert('Entry கிடைக்கவில்லை.');
+ showPage('entry');
+ eDate.value=x.date||today();eOperator.value=x.operatorCode||'';eShift.value=x.shift||'A';eShift.dataset.touched='1';eMachine.value=x.machine||'';
+ const jobs=entryJobs(x);
+ for(let n=1;n<=3;n++){
+  const j=jobs[n-1];jobField(n,'Name').value=j?.name||'';jobField(n,'PartNo').value=j?.partNo||'';jobField(n,'Cycle').value=j?.cycle||'';jobField(n,'Actual').value=j?.actual||'';
+  jobField(n,'Sessions').innerHTML='';(j?.sessions?.length?j.sessions:[{}]).forEach(s=>addSessionRow(n,s,true))
+ }
+ const ins=entryInserts(x);for(let n=1;n<=6;n++){const it=ins[n-1];document.getElementById('eInsert'+n).value=it?.code||'';document.getElementById('eQty'+n).value=it?.qty||''}
+ eQuality.value=x.quality||'';eReject.value=x.reject||'';editingEntryId=x.id;saveEntryBtn.textContent='Update Entry';cancelEntryEditBtn.style.display='inline-block';entryEditBanner.classList.add('active');
+ calcEntry();document.getElementById('entry').scrollIntoView({behavior:'smooth',block:'start'})
 }
 function delOperator(code){if(!confirm('Operator delete செய்யவா?'))return;const db=loadDB();db.operators=db.operators.filter(x=>x.code!==code);saveDB(db);refreshAll()}
 function delInsert(code){if(!confirm('Insert master delete செய்யவா?'))return;const db=loadDB();db.inserts=db.inserts.filter(x=>x.code!==code);saveDB(db);refreshAll()}
@@ -587,7 +624,9 @@ function delEntry(id){if(!confirm('இந்த entry delete செய்யவ�
 function renderOperators(){
  const db=loadDB();
  operatorRows.innerHTML=db.operators.map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.shift)}</td><td>${esc(format12(x.inTime||''))}</td><td>${esc(format12(x.outTime||''))}</td><td>${esc(x.phone)}</td><td><button class="danger" onclick="delOperator('${esc(x.code)}')">Delete</button></td></tr>`).join('');
- eOperator.innerHTML='<option value="">Select Operator</option>'+db.operators.map(x=>`<option value="${esc(x.code)}">${esc(x.code)} - ${esc(x.name)}</option>`).join('')
+ const selected=eOperator.value,filter=entryOperatorFilter.value,options=db.operators.map(x=>`<option value="${esc(x.code)}">${esc(x.code)} - ${esc(x.name)}</option>`).join('');
+ eOperator.innerHTML='<option value="">Select Operator</option>'+options;if(db.operators.some(x=>x.code===selected))eOperator.value=selected;
+ entryOperatorFilter.innerHTML='<option value="">All Operators</option>'+options;if(db.operators.some(x=>x.code===filter))entryOperatorFilter.value=filter
 }
 function renderInserts(){
  const db=loadDB();
@@ -608,16 +647,26 @@ function jobSessionText(j){
  const lines=(j.sessions||[]).map((s,i)=>`S${i+1}: ${format12(s.inTime)} - ${format12(s.outTime)} (${(+s.hours||0).toFixed(2)} h)`);
  return lines.join(' | ')
 }
+function filteredEntries(db){
+ const q=entrySearch.value.trim().toLowerCase(),op=entryOperatorFilter.value,from=entryDateFrom.value,to=entryDateTo.value;
+ return db.entries.filter(x=>{
+  if(op&&x.operatorCode!==op)return false;if(from&&x.date<from)return false;if(to&&x.date>to)return false;
+  if(!q)return true;
+  const jobs=entryJobs(x),ins=entryInserts(x),hay=[x.date,x.operatorCode,x.operatorName,x.shift,x.machine,x.job,x.partNo,...jobs.flatMap(j=>[j.name,j.partNo]),...ins.flatMap(i=>[i.code,i.name,i.brand])].join(' ').toLowerCase();
+  return hay.includes(q)
+ })
+}
+function clearEntrySearch(){entrySearch.value=entryOperatorFilter.value=entryDateFrom.value=entryDateTo.value='';renderEntries()}
 function renderEntries(){
- const db=loadDB();
- entryRows.innerHTML=[...db.entries].reverse().map(x=>{
+ const db=loadDB(),rows=filteredEntries(db);entrySearchCount.textContent=`${rows.length} / ${db.entries.length} entries`;
+ entryRows.innerHTML=[...rows].reverse().map(x=>{
   const jobs=entryJobs(x),timeline=entryTimeline(x,jobs),ins=entryInserts(x);
   const jobCells=Array.from({length:3},(_,i)=>{const j=jobs[i];return j
    ?`<td><b>${esc(j.name)}</b>${j.partNo?'<br><small>Part: '+esc(j.partNo)+'</small>':''}${j.cycle?'<br><small>Cycle: '+j.cycle+' min</small>':''}</td><td class="session-cell">${jobSessionHTML(j)}</td><td>${(+j.hours||0).toFixed(2)}</td>`
    :'<td></td><td></td><td></td>'}).join('');
   const insertCells=Array.from({length:6},(_,i)=>{const z=ins[i];return `<td>${z?esc(z.code)+' × '+(+z.qty||0):''}</td>`}).join('');
-  return `<tr><td>${x.date}</td><td>${esc(x.operatorName)}</td><td>${x.shift}</td><td>${esc(x.machine)}</td><td>${esc(format12(timeline.inTime))}</td><td>${esc(format12(timeline.outTime))}</td><td>${timeline.presenceHours.toFixed(2)} h</td><td>${(timeline.breakMinutes/60).toFixed(2)} h</td><td>${timeline.activeHours.toFixed(2)} h</td>${jobCells}<td>${(+x.target||0).toFixed(1)}</td><td>${+x.actual||0}</td><td>${(+x.percentage||0).toFixed(1)}%</td>${insertCells}<td>${money(x.value)}</td><td>${+x.quality||0}</td><td>${+x.reject||0}</td><td><button class="danger" onclick="delEntry(${x.id})">Delete</button></td></tr>`
- }).join('')
+  return `<tr><td>${x.date}</td><td>${esc(x.operatorName)}</td><td>${x.shift}</td><td>${esc(x.machine)}</td><td>${esc(format12(timeline.inTime))}</td><td>${esc(format12(timeline.outTime))}</td><td>${timeline.presenceHours.toFixed(2)} h</td><td>${(timeline.breakMinutes/60).toFixed(2)} h</td><td>${timeline.activeHours.toFixed(2)} h</td>${jobCells}<td>${(+x.target||0).toFixed(1)}</td><td>${+x.actual||0}</td><td>${(+x.percentage||0).toFixed(1)}%</td>${insertCells}<td>${money(x.value)}</td><td>${+x.quality||0}</td><td>${+x.reject||0}</td><td><button class="primary" onclick="editEntry(${x.id})">Edit</button> <button class="danger" onclick="delEntry(${x.id})">Delete</button></td></tr>`
+ }).join('')||'<tr><td colspan="31" class="muted">Search-க்கு பொருந்தும் entry இல்லை.</td></tr>'
 }
 function renderDashboard(){
  const db=loadDB(),d=dashDate.value||today(),rows=db.entries.filter(x=>x.date===d);
@@ -808,6 +857,8 @@ function renderReportAlerts(){
 }
 loadDeadlineSettingsUI();
 setInterval(()=>renderReportAlerts(),60000);
+entrySearch.addEventListener('input',renderEntries);
+[entryOperatorFilter,entryDateFrom,entryDateTo].forEach(el=>el.addEventListener('change',renderEntries));
 
 function refreshAll(){renderOperators();renderInserts();renderEntries();renderDashboard();renderReportAlerts();renderMessageCenter();calcEntry()}
 dashDate.value=eDate.value=stockDate.value=today();refreshAll();
@@ -865,15 +916,12 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
     db.ref('cncManager/operatorSubmissions').on('child_added', snap=>{
       const entry=snap.val();
       if(!entry || !entry.sourceId) return;
-      const local=loadDB();
-      if(!local.entries.some(x=>x.sourceId===entry.sourceId)){
-        local.entries.push(entry);
-        localStorage.setItem(KEY,JSON.stringify(local));
-        db.ref('cncManager/db').set(local).then(()=>snap.ref.remove());
-        refreshAll();
-      } else {
-        snap.ref.remove();
-      }
+      db.ref('cncManager/db/entries').transaction(raw=>{
+        const entries=asArray(raw);
+        const i=entries.findIndex(x=>x&&((entry.sourceId&&x.sourceId===entry.sourceId)||String(x.id)===String(entry.id)));
+        if(i>=0)entries[i]={...entries[i],...entry};else entries.push(entry);
+        return entries
+      }).then(()=>snap.ref.remove()).catch(e=>{console.error('Pending operator report sync failed',e);setStatus('Cloud: operator report pending')})
     });
 
     setStatus('Cloud: LIVE');
@@ -905,5 +953,6 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
 })();
 }
 </script>
-</body>
-</html>
+
+
+</body></html>
