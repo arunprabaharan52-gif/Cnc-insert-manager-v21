@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#15324b">
-<title>CNC PRO V23 Operator</title>
+<title>CNC PRO V23 Multi-Job Operator</title>
 <link rel="manifest" href="./manifest.json">
 <style>
 :root{--bg:#f4f7fb;--card:#fff;--ink:#17212b;--muted:#64748b;--primary:#15324b;--good:#087f5b;--bad:#b42318;--line:#dbe3ec}
@@ -16,15 +16,24 @@ input,select,button{font:inherit}input,select{width:100%;padding:10px;border:1px
 button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{background:var(--good);color:#fff}.primary{background:#0f5f99;color:#fff}
 .notice{padding:10px;border-radius:9px;background:#edf6ff;margin:10px 0}.ok{background:#e9f8f2}.err{background:#fff0f0}
 .insgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-@media(max-width:650px){.formgrid,.insgrid{grid-template-columns:1fr}}
+.job-list{display:grid;gap:12px;margin:14px 0}.job-card{border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:#f8fafc}
+.job-card h3{margin:0 0 10px;color:var(--primary)}.job-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.time-pair{display:grid;grid-template-columns:minmax(105px,1fr) 82px;gap:6px}.job-summary{margin-top:10px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #e2e8f0;font-size:13px}
+.session-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 8px;padding-top:10px;border-top:1px solid #dbe3ec}.session-head small{display:block;color:var(--muted);margin-top:3px}.session-add{background:#dbeafe;color:#0f5f99;font-weight:700;padding:9px 11px}.session-list{display:grid;gap:8px}.time-session{display:grid;grid-template-columns:80px minmax(210px,1fr) minmax(210px,1fr) 115px auto;gap:8px;align-items:end;padding:10px;border:1px solid #dbe3ec;border-radius:10px;background:#fff}.session-no{font-weight:700;color:var(--primary);align-self:center}.session-remove{background:#fff0f0;color:var(--bad);padding:10px}.active-hours{max-width:220px;margin-top:10px}.badtxt{color:var(--bad);font-weight:700}
+@media(max-width:760px){.job-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.time-session{grid-template-columns:80px repeat(2,minmax(180px,1fr));}.time-session .session-hours-wrap{grid-column:2}.time-session .session-remove{grid-column:3}}
+@media(max-width:650px){.formgrid,.insgrid,.job-grid{grid-template-columns:1fr}.time-pair{grid-template-columns:minmax(0,1fr) 82px}.session-head{align-items:flex-start;flex-direction:column}.time-session{grid-template-columns:1fr}.time-session .session-hours-wrap,.time-session .session-remove{grid-column:auto}.session-remove{width:100%}.active-hours{max-width:none}}
 </style>
+<script src="./access-config.js"></script>
+<script src="./access-control.js"></script>
+<script>window.CNCAuth.guard('operator');</script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
 <script src="./firebase-config.js"></script>
 </head>
 <body>
-<header><h1>CNC Daily Operator Report</h1><small>Employee Daily Entry</small></header>
+<header><h1>CNC Daily Operator Report — Multi-Job</h1><small>Operator Secure Login • Entry Page Only • 12-hour AM/PM Time</small></header>
 <div class="container">
 <div class="card">
   <div id="status" class="notice">Cloud connection checking...</div>
@@ -34,16 +43,50 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
     <div><label>Date</label><input id="eDate" type="date"></div>
     <div><label>Operator</label><select id="eOperator"><option value="">Loading...</option></select></div>
     <div><label>Shift</label><select id="eShift"><option>A</option><option>B</option></select></div>
-    <div><label>In Time (12 Hour)</label><select id="eInTime"><option value="">Select Time</option></select></div>
-    <div><label>In AM/PM</label><select id="eInAP"><option>AM</option><option>PM</option></select></div>
-    <div><label>Out Time (12 Hour)</label><select id="eOutTime"><option value="">Select Time</option></select></div>
-    <div><label>Out AM/PM</label><select id="eOutAP"><option>AM</option><option>PM</option></select></div>
-    <div><label>Working Hours</label><input id="eHours" readonly></div>
     <div><label>Machine</label><input id="eMachine" placeholder="Machine No"></div>
-    <div><label>Job / Component</label><input id="eJob" placeholder="Job name"></div>
-    <div><label>Part Number</label><input id="ePartNo" placeholder="Part No"></div>
-    <div><label>Cycle Time (minutes/job)</label><input id="eCycle" type="number" min="0" step="0.01"></div>
-    <div><label>Actual Jobs</label><input id="eActual" type="number" min="0"></div>
+  </div>
+  <div class="job-list">
+    <div class="job-card">
+      <h3>Job 1</h3>
+      <div class="job-grid">
+        <div><label>Job / Component</label><input id="eJob1Name" placeholder="Job 1 name"></div>
+        <div><label>Part Number</label><input id="eJob1PartNo" placeholder="Part No"></div>
+        <div><label>Cycle Time (minutes/job)</label><input id="eJob1Cycle" type="number" min="0" step="0.01"></div>
+        <div><label>Actual Jobs</label><input id="eJob1Actual" type="number" min="0"></div>
+      </div>
+      <div class="session-head"><div><b>Job 1 Work Sessions</b><small>Lunch / break செல்லும் போது Out; திரும்ப வந்ததும் புதிய session In சேர்க்கவும்.</small></div><button class="session-add" type="button" onclick="addSessionRow(1)">+ Resume / Add Session</button></div>
+      <div id="eJob1Sessions" class="session-list"></div>
+      <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob1Hours" readonly></div>
+      <div id="eJob1Calc" class="job-summary">Job 1 Target / Percentage automatic.</div>
+    </div>
+    <div class="job-card">
+      <h3>Job 2</h3>
+      <div class="job-grid">
+        <div><label>Job / Component</label><input id="eJob2Name" placeholder="Job 2 name"></div>
+        <div><label>Part Number</label><input id="eJob2PartNo" placeholder="Part No"></div>
+        <div><label>Cycle Time (minutes/job)</label><input id="eJob2Cycle" type="number" min="0" step="0.01"></div>
+        <div><label>Actual Jobs</label><input id="eJob2Actual" type="number" min="0"></div>
+      </div>
+      <div class="session-head"><div><b>Job 2 Work Sessions</b><small>ஒவ்வொரு வேலை தொடர்ச்சிக்கும் தனி In / Out session.</small></div><button class="session-add" type="button" onclick="addSessionRow(2)">+ Resume / Add Session</button></div>
+      <div id="eJob2Sessions" class="session-list"></div>
+      <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob2Hours" readonly></div>
+      <div id="eJob2Calc" class="job-summary">Job 2 Target / Percentage automatic.</div>
+    </div>
+    <div class="job-card">
+      <h3>Job 3</h3>
+      <div class="job-grid">
+        <div><label>Job / Component</label><input id="eJob3Name" placeholder="Job 3 name"></div>
+        <div><label>Part Number</label><input id="eJob3PartNo" placeholder="Part No"></div>
+        <div><label>Cycle Time (minutes/job)</label><input id="eJob3Cycle" type="number" min="0" step="0.01"></div>
+        <div><label>Actual Jobs</label><input id="eJob3Actual" type="number" min="0"></div>
+      </div>
+      <div class="session-head"><div><b>Job 3 Work Sessions</b><small>ஒவ்வொரு வேலை தொடர்ச்சிக்கும் தனி In / Out session.</small></div><button class="session-add" type="button" onclick="addSessionRow(3)">+ Resume / Add Session</button></div>
+      <div id="eJob3Sessions" class="session-list"></div>
+      <div class="active-hours"><label>Active Working Hours (Auto)</label><input id="eJob3Hours" readonly></div>
+      <div id="eJob3Calc" class="job-summary">Job 3 Target / Percentage automatic.</div>
+    </div>
+  </div>
+  <div class="formgrid">
     <div><label>Quality Qty</label><input id="eQuality" type="number" min="0"></div>
     <div><label>Non-Quality / Rejected Qty</label><input id="eReject" type="number" min="0"></div>
   </div>
@@ -54,16 +97,16 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
 </div>
 </div>
 <script>
+if(window.CNCAuth&&window.CNCAuth.isAuthorized('operator')){
 let cloudDB=null, master={operators:[],inserts:[],entries:[],stockIn:[]};
 const statusEl=document.getElementById('status');
 const today=()=>{const d=new Date(),z=d.getTimezoneOffset()*60000;return new Date(d-z).toISOString().slice(0,10)};
+const asArray=v=>Array.isArray(v)?v:Object.values(v||{}).filter(Boolean);
+function normalizeMaster(d){d=(d&&typeof d==='object')?d:{};return {operators:asArray(d.operators),inserts:asArray(d.inserts),entries:asArray(d.entries),stockIn:asArray(d.stockIn)}}
 
 eDate.value=today();
 
-function fill12HourTimeSelect(id){
-  const el=document.getElementById(id);
-  if(!el)return;
-  const current=el.value;
+function build12HourOptions(){
   let html='<option value="">Select Time</option>';
   for(let h=1;h<=12;h++){
     for(let m=0;m<60;m++){
@@ -72,12 +115,9 @@ function fill12HourTimeSelect(id){
       html+=`<option value="${hh}:${mm}">${h}:${mm}</option>`;
     }
   }
-  el.innerHTML=html;
-  if(current)el.value=current;
+  return html;
 }
-fill12HourTimeSelect('eInTime');
-fill12HourTimeSelect('eOutTime');
-
+const TIME_OPTIONS_HTML=build12HourOptions();
 function time24(v,ap){
   if(!v)return '';
   let [h,m]=v.split(':').map(Number);
@@ -85,14 +125,100 @@ function time24(v,ap){
   if(ap==='PM' && h<12)h+=12;
   return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
 }
-function hoursBetween(){
-  const a=time24(eInTime.value,eInAP.value),b=time24(eOutTime.value,eOutAP.value);
-  if(!a||!b){eHours.value='';return 0}
-  const mins=t=>{const [h,m]=t.split(':').map(Number);return h*60+m};
-  let d=mins(b)-mins(a); if(d<0)d+=1440;
-  eHours.value=(d/60).toFixed(2); return d/60;
+function from24(t){
+  if(!t||!/^\d{1,2}:\d{2}$/.test(t))return {time:'',period:'AM'};
+  let [h,m]=t.split(':').map(Number),period=h>=12?'PM':'AM';h=h%12||12;
+  return {time:String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'),period};
 }
-['eInTime','eInAP','eOutTime','eOutAP'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{hoursBetween();calc()}));
+function format12(t){const z=from24(t);return z.time?z.time+' '+z.period:''}
+function minuteOfDay(t){if(!t)return 0;const [h,m]=t.split(':').map(Number);return h*60+m}
+function jobField(n,suffix){return document.getElementById(`eJob${n}${suffix}`)}
+function updateSessionLabels(n){
+  [...jobField(n,'Sessions').querySelectorAll('.time-session')].forEach((row,i)=>{row.querySelector('.session-no').textContent='Session '+(i+1)});
+}
+function addSessionRow(n,data={},skipCalc=false){
+  const list=jobField(n,'Sessions'),row=document.createElement('div');row.className='time-session';
+  row.innerHTML=`<div class="session-no"></div>
+    <div><label>In Time (12 Hour)</label><div class="time-pair"><select class="session-in-time">${TIME_OPTIONS_HTML}</select><select class="session-in-ap"><option>AM</option><option>PM</option></select></div></div>
+    <div><label>Out Time (12 Hour)</label><div class="time-pair"><select class="session-out-time">${TIME_OPTIONS_HTML}</select><select class="session-out-ap"><option>AM</option><option>PM</option></select></div></div>
+    <div class="session-hours-wrap"><label>Session Hours</label><input class="session-hours" readonly></div>
+    <button class="session-remove" type="button">Remove</button>`;
+  const in12=from24(data.inTime),out12=from24(data.outTime);
+  row.querySelector('.session-in-time').value=in12.time;row.querySelector('.session-in-ap').value=in12.time?in12.period:(data.inAP||'AM');
+  row.querySelector('.session-out-time').value=out12.time;row.querySelector('.session-out-ap').value=out12.time?out12.period:(data.outAP||'PM');
+  row.querySelectorAll('select').forEach(el=>{el.addEventListener('input',calc);el.addEventListener('change',calc)});
+  row.querySelector('.session-remove').addEventListener('click',()=>removeSessionRow(n,row));
+  list.appendChild(row);updateSessionLabels(n);if(!skipCalc)calc();
+}
+function removeSessionRow(n,row){
+  const list=jobField(n,'Sessions');
+  if(list.children.length===1){row.querySelector('.session-in-time').value='';row.querySelector('.session-out-time').value='';row.querySelector('.session-in-ap').value='AM';row.querySelector('.session-out-ap').value='PM'}
+  else row.remove();
+  updateSessionLabels(n);calc();
+}
+function resetJobSessions(n,skipCalc=false){jobField(n,'Sessions').innerHTML='';addSessionRow(n,{},skipCalc)}
+function readJobInput(n){
+  const name=jobField(n,'Name').value.trim(),partNo=jobField(n,'PartNo').value.trim();
+  const cycle=+jobField(n,'Cycle').value||0,actual=+jobField(n,'Actual').value||0;
+  const rows=[...jobField(n,'Sessions').querySelectorAll('.time-session')],sessions=[];
+  let anySessionValue=false,validationError='',previousRawStart=null,dayOffset=0,previousEnd=null,firstStart=null,lastEnd=null,totalMinutes=0;
+  rows.forEach((row,index)=>{
+    const inSelected=row.querySelector('.session-in-time').value,outSelected=row.querySelector('.session-out-time').value;
+    const inTime=time24(inSelected,row.querySelector('.session-in-ap').value),outTime=time24(outSelected,row.querySelector('.session-out-ap').value);
+    const hoursBox=row.querySelector('.session-hours');
+    if(inSelected||outSelected)anySessionValue=true;
+    if(!inSelected&&!outSelected){hoursBox.value='';return}
+    if(!inSelected||!outSelected){hoursBox.value='';if(!validationError)validationError=`Session ${index+1}-ல் In Time மற்றும் Out Time இரண்டும் தேர்வு செய்யவும்.`;return}
+    const rawStart=minuteOfDay(inTime),rawEnd=minuteOfDay(outTime);
+    if(rawStart===rawEnd){hoursBox.value='';if(!validationError)validationError=`Session ${index+1}-ன் In Time மற்றும் Out Time ஒரே நேரமாக இருக்கக்கூடாது.`;return}
+    if(previousRawStart!==null&&rawStart<previousRawStart)dayOffset+=1440;
+    const start=rawStart+dayOffset,end=rawEnd+dayOffset+(rawEnd<rawStart?1440:0),duration=end-start;
+    hoursBox.value=(duration/60).toFixed(2);
+    if(previousEnd!==null&&start<previousEnd&&!validationError)validationError=`Session ${index+1}, முந்தைய session நேரத்துடன் overlap ஆகிறது.`;
+    sessions.push({inTime,outTime,hours:duration/60});totalMinutes+=duration;
+    if(firstStart===null)firstStart=start;lastEnd=end;previousEnd=end;previousRawStart=rawStart;
+  });
+  const hours=totalMinutes/60,breakMinutes=sessions.length>1?Math.max(0,(lastEnd-firstStart)-totalMinutes):0;
+  const jobTarget=cycle>0?(hours*60)/cycle:0,percentage=jobTarget>0?actual/jobTarget*100:0;
+  const hasAny=!!(name||partNo||cycle||actual||anySessionValue),inTime=sessions[0]?.inTime||'',outTime=sessions.length?sessions[sessions.length-1].outTime:'';
+  return {number:n,name,partNo,cycle,sessions,inTime,outTime,hours,breakMinutes,target:jobTarget,actual,percentage,hasAny,validationError}
+}
+function collectJobInputs(){return [1,2,3].map(readJobInput)}
+function operatorTimeline(jobs){
+  const source=[];
+  (jobs||[]).forEach(j=>(j.sessions||[]).forEach((s,i)=>{
+    if(!s.inTime||!s.outTime)return;
+    const rawStart=minuteOfDay(s.inTime),rawEnd=minuteOfDay(s.outTime);
+    let clockDuration=rawEnd-rawStart;if(clockDuration<=0)clockDuration+=1440;
+    const savedHours=Number(s.hours),activeMinutes=Number.isFinite(savedHours)&&savedHours>0?savedHours*60:clockDuration;
+    source.push({jobNumber:+j.number||0,sessionNumber:i+1,inTime:s.inTime,outTime:s.outTime,rawStart,clockDuration,activeMinutes})
+  }));
+  if(!source.length)return {sessions:[],inTime:'',outTime:'',presenceMinutes:0,activeMinutes:0,breakMinutes:0,validationError:''};
+  const anchors=[...new Set(source.map(s=>s.rawStart))];let best=null;
+  anchors.forEach(anchor=>{
+    const sessions=source.map(s=>{const start=s.rawStart+(s.rawStart<anchor?1440:0);return {...s,start,end:start+s.clockDuration}}).sort((a,b)=>a.start-b.start||a.end-b.end);
+    let overlapPair=null,furthest=sessions[0];
+    for(let i=1;i<sessions.length;i++){
+      const current=sessions[i];
+      if(current.start<furthest.end&&!overlapPair)overlapPair=[furthest,current];
+      if(current.end>furthest.end)furthest=current
+    }
+    const first=sessions[0],last=sessions.reduce((a,s)=>s.end>a.end?s:a,sessions[0]);
+    const presenceMinutes=last.end-first.start,activeMinutes=sessions.reduce((a,s)=>a+s.activeMinutes,0);
+    const score=[presenceMinutes>1440?1:0,overlapPair?1:0,presenceMinutes];
+    if(!best||score.some((v,i)=>v<best.score[i]&&score.slice(0,i).every((x,k)=>x===best.score[k])))best={sessions,first,last,presenceMinutes,activeMinutes,overlapPair,score}
+  });
+  let validationError='';
+  if(best.presenceMinutes>1440)validationError='ஒரே Daily Report-ன் மொத்த நேரம் 24 மணியை மீறக்கூடாது.';
+  else if(best.overlapPair){const [a,b]=best.overlapPair;validationError=`Job ${a.jobNumber} Session ${a.sessionNumber} மற்றும் Job ${b.jobNumber} Session ${b.sessionNumber} நேரங்கள் overlap ஆகின்றன.`}
+  return {sessions:best.sessions,inTime:best.first.inTime,outTime:best.last.outTime,presenceMinutes:best.presenceMinutes,activeMinutes:best.activeMinutes,breakMinutes:Math.max(0,best.presenceMinutes-best.activeMinutes),validationError}
+}
+for(let n=1;n<=3;n++){
+  resetJobSessions(n,true);
+  ['Name','PartNo','Cycle','Actual'].forEach(s=>{
+    const el=jobField(n,s);el.addEventListener('input',calc);el.addEventListener('change',calc)
+  })
+}
 
 function renderMaster(){
   eOperator.innerHTML='<option value="">Select Operator</option>'+master.operators.map(o=>`<option value="${o.code}">${o.code} - ${o.name}</option>`).join('');
@@ -108,18 +234,24 @@ eOperator.addEventListener('change',()=>{
   const op=master.operators.find(x=>x.code===eOperator.value);
   if(op)eShift.value=op.shift||'A'; operatorReportStatus();
 });
-['eCycle','eActual'].forEach(id=>document.getElementById(id).addEventListener('input',calc));
 
 function calc(){
-  const hrs=hoursBetween(), cycle=+eCycle.value||0, actual=+eActual.value||0;
-  const target=cycle>0?(hrs*60)/cycle:0, pct=target>0?actual/target*100:0;
+  const rows=collectJobInputs();
+  rows.forEach(j=>{
+    jobField(j.number,'Hours').value=j.hasAny&&j.sessions.length?j.hours.toFixed(2):'';
+    jobField(j.number,'Calc').innerHTML=j.validationError
+      ? `<span class="badtxt">${j.validationError}</span>`
+      : `Active Working Hours: <b>${j.hours.toFixed(2)}</b> &nbsp; Sessions: <b>${j.sessions.length}</b> &nbsp; This Job Session Gap: <b>${(j.breakMinutes/60).toFixed(2)} h</b> &nbsp; Target: <b>${j.target.toFixed(1)}</b> &nbsp; Job %: <b>${j.percentage.toFixed(1)}%</b>`
+  });
+  const active=rows.filter(j=>j.hasAny),timeline=operatorTimeline(active),hrs=timeline.activeMinutes/60,presenceHours=timeline.presenceMinutes/60,breakMinutes=timeline.breakMinutes,target=active.reduce((a,j)=>a+j.target,0),actual=active.reduce((a,j)=>a+j.actual,0),pct=target>0?actual/target*100:0;
   let val=0,qty=0;
   for(let i=1;i<=6;i++){
     const code=document.getElementById('ins'+i)?.value||'', q=+document.getElementById('qty'+i)?.value||0;
     const it=master.inserts.find(x=>x.code===code); qty+=q; if(it)val+=q*(+it.value||0);
   }
-  calc.innerHTML=`Target: <b>${target.toFixed(1)}</b> &nbsp; Operator: <b>${pct.toFixed(1)}%</b> &nbsp; Total Insert Qty: <b>${qty}</b> &nbsp; Value: <b>₹${val.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>`;
-  return {hrs,target,pct,val,qty};
+  const warning=timeline.validationError?`<span class="badtxt">${timeline.validationError}</span><br>`:'';
+  document.getElementById('calc').innerHTML=`${warning}First In: <b>${format12(timeline.inTime)||'-'}</b> &nbsp; Last Out: <b>${format12(timeline.outTime)||'-'}</b> &nbsp; Total Presence: <b>${presenceHours.toFixed(2)} h</b> &nbsp; Actual Break: <b>${(breakMinutes/60).toFixed(2)} h</b> &nbsp; Net Active Work: <b>${hrs.toFixed(2)} h</b> &nbsp; Total Target: <b>${target.toFixed(1)}</b> &nbsp; Total Actual: <b>${actual}</b> &nbsp; Overall Operator: <b>${pct.toFixed(1)}%</b> &nbsp; Total Insert Qty: <b>${qty}</b> &nbsp; Value: <b>₹${val.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>`;
+  return {rows,jobs:active.map(({hasAny,validationError,...j})=>j),timeline,hrs,presenceHours,breakMinutes,target,actual,pct,val,qty};
 }
 
 
@@ -184,6 +316,15 @@ async function sendReport(){
   const op=master.operators.find(x=>x.code===eOperator.value);
   if(!eDate.value||!op)return alert('Date மற்றும் Operator தேர்வு செய்யவும்.');
   const c=calc(), inserts=[];
+  const entered=c.rows.filter(j=>j.hasAny);
+  if(!entered.length)return alert('குறைந்தது Job 1 விவரங்களை கொடுக்கவும்.');
+  for(const j of entered){
+    if(!j.name)return alert(`Job ${j.number} பெயரை கொடுக்கவும்.`);
+    if(j.validationError)return alert(`Job ${j.number}: ${j.validationError}`);
+    if(!j.sessions.length)return alert(`Job ${j.number}-க்கு குறைந்தது ஒரு முழுமையான In / Out session சேர்க்கவும்.`)
+  }
+  if(c.timeline.validationError)return alert(c.timeline.validationError);
+  const jobs=entered.map(({hasAny,validationError,...j})=>j);
   for(let i=1;i<=6;i++){
     const code=document.getElementById('ins'+i).value,q=+document.getElementById('qty'+i).value||0;
     if(code&&q>0){
@@ -192,20 +333,27 @@ async function sendReport(){
     }
   }
   if(!inserts.length)return alert('குறைந்தது ஒரு Insert மற்றும் Qty கொடுக்கவும்.');
+  const quality=+eQuality.value||0,reject=+eReject.value||0;
+  if(quality+reject>c.qty)return alert('Quality + Non-Quality Qty, Total Used Qty-ஐ விட அதிகமாக இருக்கக்கூடாது.');
   const sourceId='OP-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
   const entry={
     id:Date.now(),sourceId,date:eDate.value,operatorCode:op.code,operatorName:op.name,shift:eShift.value,
-    inTime:time24(eInTime.value,eInAP.value),outTime:time24(eOutTime.value,eOutAP.value),
-    machine:eMachine.value.trim(),job:eJob.value.trim(),partNo:ePartNo.value.trim(),
-    cycle:+eCycle.value||0,hours:c.hrs,target:c.target,actual:+eActual.value||0,percentage:c.pct,
+    machine:eMachine.value.trim(),jobs,
+    inTime:c.timeline.inTime,outTime:c.timeline.outTime,presenceHours:c.presenceHours,breakMinutes:c.breakMinutes,netWorkHours:c.hrs,
+    job:jobs.map(j=>j.name).join(' / '),partNo:jobs.map(j=>j.partNo).filter(Boolean).join(' / '),cycle:jobs[0].cycle,
+    hours:c.hrs,target:c.target,actual:c.actual,percentage:c.pct,
     inserts,insertCode:inserts[0].code,insertName:inserts[0].name,qty:c.qty,unitValue:inserts[0].unitValue,value:c.val,
-    quality:+eQuality.value||0,reject:+eReject.value||0,submittedAt:new Date().toISOString()
+    quality,reject,submittedAt:new Date().toISOString()
   };
   sendBtn.disabled=true; sendBtn.textContent='Sending...';
   try{
     await cloudDB.ref('cncManager/operatorSubmissions').push(entry);
     statusEl.className='notice ok';statusEl.textContent='Report sent successfully. Admin Dashboard-ல் சேர்க்கப்பட்டது.';
-    ['eMachine','eJob','ePartNo','eCycle','eActual','eQuality','eReject'].forEach(id=>document.getElementById(id).value='');
+    ['eMachine','eQuality','eReject'].forEach(id=>document.getElementById(id).value='');
+    for(let n=1;n<=3;n++){
+      ['Name','PartNo','Cycle','Actual','Hours'].forEach(s=>jobField(n,s).value='');
+      resetJobSessions(n,true)
+    }
     for(let i=1;i<=6;i++){document.getElementById('ins'+i).value='';document.getElementById('qty'+i).value='';}
     calc();
   }catch(e){statusEl.className='notice err';statusEl.textContent='Send failed: '+e.message}
@@ -238,8 +386,10 @@ if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey){
   statusEl.className='notice err';statusEl.textContent='Firebase config இன்னும் சேர்க்கவில்லை.';
 }
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js').catch(()=>{});}
+}
 </script>
 <script>
+if(window.CNCAuth&&window.CNCAuth.isAuthorized('operator')){
 (function(){
   try{
     if(window.firebase && firebase.messaging){
@@ -253,6 +403,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-wor
     }
   }catch(e){console.warn('Operator foreground messaging init',e)}
 })();
+}
 </script>
 </body>
 </html>

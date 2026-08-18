@@ -1,5 +1,28 @@
-const CACHE='cnc-pro-v23-fixed-v2';
-const CORE=['./','./admin.html','./operator.html','./firebase-config.js'];
-self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).catch(()=>{}))});
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy)).catch(()=>{});return r}).catch(()=>caches.match(e.request))) });
+const CACHE='cnc-pro-v23-variable-break-net-work-v4';
+const CORE=['./','./index.html','./admin.html','./operator.html','./access-config.js','./access-control.js','./manifest.json','./firebase-config.js'];
+
+self.addEventListener('install',event=>{
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()));
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.filter(key=>key!==CACHE&&key.startsWith('cnc-pro-')).map(key=>caches.delete(key))))
+      .then(()=>self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET')return;
+  event.respondWith(
+    fetch(event.request)
+      .then(response=>{
+        if(response.ok&&new URL(event.request.url).origin===self.location.origin){
+          const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));
+        }
+        return response
+      })
+      .catch(()=>caches.match(event.request).then(hit=>hit||caches.match('./index.html')))
+  );
+});
