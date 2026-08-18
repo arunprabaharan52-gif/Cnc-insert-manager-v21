@@ -3,8 +3,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#15324b">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>CNC PRO V23 Multi-Job Operator</title>
-<link rel="manifest" href="./operator-manifest.json">
+<link rel="manifest" href="./operator-manifest.json?v=29">
 <style>
 :root{--bg:#f4f7fb;--card:#fff;--ink:#17212b;--muted:#64748b;--primary:#15324b;--good:#087f5b;--bad:#b42318;--line:#dbe3ec}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Tamil",sans-serif;background:var(--bg);color:var(--ink)}
@@ -19,7 +20,7 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
 .job-card h3{margin:0 0 10px;color:var(--primary)}.job-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .time-pair{display:grid;grid-template-columns:minmax(105px,1fr) 82px;gap:6px}.job-summary{margin-top:10px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #e2e8f0;font-size:13px}
 .session-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 8px;padding-top:10px;border-top:1px solid #dbe3ec}.session-head small{display:block;color:var(--muted);margin-top:3px}.session-add{background:#dbeafe;color:#0f5f99;font-weight:700;padding:9px 11px}.session-list{display:grid;gap:8px}.time-session{display:grid;grid-template-columns:80px minmax(210px,1fr) minmax(210px,1fr) 115px auto;gap:8px;align-items:end;padding:10px;border:1px solid #dbe3ec;border-radius:10px;background:#fff}.session-no{font-weight:700;color:var(--primary);align-self:center}.session-remove{background:#fff0f0;color:var(--bad);padding:10px}.active-hours{max-width:220px;margin-top:10px}.badtxt{color:var(--bad);font-weight:700}
-.quick-time{font-variant-numeric:tabular-nums;letter-spacing:.04em}.header-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.header-actions button{background:#fff;color:var(--primary);padding:8px 10px}.tablebox{overflow:auto;margin-top:14px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid #e5e7eb;text-align:left;white-space:nowrap}th{background:#f8fafc}.edit-note{display:none;background:#fff7e6;color:#8a4b00}.edit-note.active{display:block}
+.quick-time{font-variant-numeric:tabular-nums;letter-spacing:.04em}.header-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.header-actions button{background:#fff;color:var(--primary);padding:8px 10px}.tablebox{overflow:auto;margin-top:14px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid #e5e7eb;text-align:left;white-space:nowrap}th{background:#f8fafc}.edit-note{display:none;background:#fff7e6;color:#8a4b00}.edit-note.active{display:block}.version-badge{display:inline-block;margin-left:8px;padding:3px 7px;border-radius:999px;background:#fff;color:var(--primary);font-size:11px;font-weight:700;vertical-align:middle}
 @media(max-width:760px){.job-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){.time-session{grid-template-columns:80px repeat(2,minmax(180px,1fr));}.time-session .session-hours-wrap{grid-column:2}.time-session .session-remove{grid-column:3}}
 @media(max-width:650px){.formgrid,.insgrid,.job-grid{grid-template-columns:1fr}.time-pair{grid-template-columns:minmax(0,1fr) 82px}.session-head{align-items:flex-start;flex-direction:column}.time-session{grid-template-columns:1fr}.time-session .session-hours-wrap,.time-session .session-remove{grid-column:auto}.session-remove{width:100%}.active-hours{max-width:none}}
@@ -27,13 +28,13 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
-<script src="./firebase-config.js"></script>
-<script src="./access-config.js"></script>
-<script src="./access-control.js"></script>
+<script src="./firebase-config.js?v=29"></script>
+<script src="./access-config.js?v=29"></script>
+<script src="./access-control.js?v=29"></script>
 <script>window.CNCAuth.guard('operator');</script>
 </head>
 <body>
-<header><h1>CNC Daily Operator Report — Multi-Job</h1><small>Operator Secure Login • Entry Page Only • 12-hour AM/PM Time</small><div class="header-actions"><button onclick="CNCAuth.openPasswordDialog('operator','operator')">Change Password</button><button onclick="CNCAuth.logout('operator')">Logout</button></div></header>
+<header><h1>CNC Daily Operator Report — Multi-Job <span class="version-badge">V29</span></h1><small>Operator Secure Login • Entry Page Only • 12-hour AM/PM Time</small><div class="header-actions"><button onclick="CNCAuth.openPasswordDialog('operator','operator')">Change Password</button><button onclick="CNCAuth.logout('operator')">Logout</button></div></header>
 <div class="container">
 <div class="card">
   <div id="status" class="notice">Cloud connection checking...</div>
@@ -350,16 +351,25 @@ async function enableOperatorAlerts(){
 }
 
 async function syncOperatorEntry(entry){
+  const queueKey=String(entry.sourceId||entry.id||Date.now()).replace(/[.#$\/\[\]]/g,'_');
+  const queueRef=cloudDB.ref('cncManager/operatorSubmissions/'+queueKey);
+  let queued=false,queueError=null;
+  try{await queueRef.set({...entry,pendingSyncAt:new Date().toISOString()});queued=true}catch(e){queueError=e;console.warn('Pending queue write failed',e)}
   try{
-    await cloudDB.ref('cncManager/db/entries').transaction(raw=>{
+    const result=await cloudDB.ref('cncManager/db/entries').transaction(raw=>{
       const entries=asArray(raw),i=entries.findIndex(x=>x&&((entry.sourceId&&x.sourceId===entry.sourceId)||String(x.id)===String(entry.id)));
       if(i>=0)entries[i]={...entries[i],...entry};else entries.push(entry);
       return entries
     });
+    if(!result||result.committed!==true)throw new Error('Firebase entry transaction not committed');
+    if(queued)await queueRef.remove().catch(()=>{});
     return 'direct'
   }catch(directError){
     console.warn('Direct entry sync failed; using pending queue',directError);
-    await cloudDB.ref('cncManager/operatorSubmissions').push(entry);
+    if(!queued){
+      try{await cloudDB.ref('cncManager/operatorSubmissions').push({...entry,pendingSyncAt:new Date().toISOString()});queued=true}
+      catch(fallbackError){throw new Error('Direct sync: '+directError.message+'; Pending queue: '+(queueError?.message||fallbackError.message))}
+    }
     return 'queue'
   }
 }
@@ -402,7 +412,7 @@ async function sendReport(){
   sendBtn.disabled=true; sendBtn.textContent='Sending...';
   try{
     const mode=await syncOperatorEntry(entry);
-    statusEl.className='notice ok';statusEl.textContent=mode==='direct'?'Report synced successfully — Admin Dashboard-ல் உடனே சேர்க்கப்பட்டது.':'Report sent — Admin திறந்தவுடன் pending report sync ஆகும்.';
+    statusEl.className='notice ok';statusEl.textContent=mode==='direct'?'Report synced successfully — Admin Dashboard-ல் உடனே சேர்க்கப்பட்டது.':'Report safely queued — Admin Auto Sync / Sync Pending Reports மூலம் சேர்க்கப்படும்.';
     resetReportForm();
   }catch(e){statusEl.className='notice err';statusEl.textContent='Send failed: '+e.message}
   finally{sendBtn.disabled=false;sendBtn.textContent=editingReportId===null?'Send Daily Report':'Update Daily Report';}
@@ -433,7 +443,7 @@ if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey){
 }else{
   statusEl.className='notice err';statusEl.textContent='Firebase config இன்னும் சேர்க்கவில்லை.';
 }
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js').catch(()=>{});}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=29',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});}
 }
 </script>
 <script>

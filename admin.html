@@ -3,6 +3,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#15324b">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>CNC PRO V23 Multi-Job Admin</title>
 <style>
 :root{--bg:#f4f7fb;--card:#fff;--ink:#17212b;--muted:#64748b;--primary:#15324b;--good:#087f5b;--warn:#b26a00;--bad:#b42318;--line:#dbe3ec}
@@ -33,7 +34,7 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
 .job-card h3{margin:0 0 10px;color:var(--primary)}.job-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .time-pair{display:grid;grid-template-columns:minmax(105px,1fr) 82px;gap:6px}.job-summary{margin-top:10px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #e2e8f0;font-size:13px}
 .session-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 8px;padding-top:10px;border-top:1px solid #dbe3ec}.session-head small{display:block;color:var(--muted);margin-top:3px}.session-add{background:#dbeafe;color:#0f5f99;font-weight:700;padding:9px 11px}.session-list{display:grid;gap:8px}.time-session{display:grid;grid-template-columns:80px minmax(210px,1fr) minmax(210px,1fr) 115px auto;gap:8px;align-items:end;padding:10px;border:1px solid #dbe3ec;border-radius:10px;background:#fff}.session-no{font-weight:700;color:var(--primary);align-self:center}.session-remove{background:#fff0f0;color:var(--bad);padding:10px}.active-hours{max-width:220px;margin-top:10px}.session-cell{white-space:normal;min-width:260px;line-height:1.55}
-.quick-time{font-variant-numeric:tabular-nums;letter-spacing:.04em}.search-panel{margin:10px 0 14px}.search-count{align-self:end;padding:10px;color:var(--muted);font-weight:700}.edit-banner{display:none;background:#fff7e6;color:#8a4b00}.edit-banner.active{display:block}
+.quick-time{font-variant-numeric:tabular-nums;letter-spacing:.04em}.search-panel{margin:10px 0 14px}.search-count{align-self:end;padding:10px;color:var(--muted);font-weight:700}.edit-banner{display:none;background:#fff7e6;color:#8a4b00}.edit-banner.active{display:block}.version-badge{display:inline-block;margin-left:8px;padding:3px 7px;border-radius:999px;background:#fff;color:var(--primary);font-size:11px;font-weight:700;vertical-align:middle}.sync-box{border-left:4px solid #0f5f99}.sync-box.ok{border-left-color:var(--good)}.sync-box.warn{border-left-color:var(--warn)}
 @media(max-width:850px){.job-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:1000px){.time-session{grid-template-columns:80px repeat(2,minmax(180px,1fr));}.time-session .session-hours-wrap{grid-column:2}.time-session .session-remove{grid-column:3}}
 @media(max-width:560px){.job-grid{grid-template-columns:1fr}.time-pair{grid-template-columns:minmax(0,1fr) 82px}.session-head{align-items:flex-start;flex-direction:column}.time-session{grid-template-columns:1fr}.time-session .session-hours-wrap,.time-session .session-remove{grid-column:auto}.session-remove{width:100%}.active-hours{max-width:none}}
@@ -42,20 +43,21 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
-<script src="./firebase-config.js"></script>
-<script src="./access-config.js"></script>
-<script src="./access-control.js"></script>
+<script src="./firebase-config.js?v=29"></script>
+<script src="./access-config.js?v=29"></script>
+<script src="./access-control.js?v=29"></script>
 <script>window.CNCAuth.guard('admin');</script>
-<link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="./manifest.json?v=29">
 
 </head>
 <body>
 <header>
-  <h1>CNC Insert Manager PRO V23 — Multi-Job</h1>
+  <h1>CNC Insert Manager PRO V23 — Multi-Job <span class="version-badge">V29</span></h1>
   <small>Admin Secure Login • 3 Jobs • Multiple Work Sessions • 12-hour AM/PM Time</small>
   <nav>
     <button onclick="showPage('dashboard')">Dashboard</button>
     <button onclick="showPage('entry')">Daily Entry</button>
+    <button onclick="openEntrySearch()">Search Records</button>
     <button onclick="showPage('operators')">Operators</button>
     <button onclick="showPage('inserts')">Insert Master / Stock</button>
     <button onclick="showPage('messages')">Messages / Photos</button>
@@ -74,6 +76,10 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
     <button onclick="window.print()">Print</button>
   </div>
   <div class="grid" id="kpis"></div>
+
+  <h3 class="sectiontitle">Operator Report Cloud Sync</h3>
+  <div id="pendingSyncSummary" class="card sync-box">Pending operator reports checking...</div>
+  <div class="actions no-print"><button class="primary" onclick="window.forcePendingSync&&window.forcePendingSync()">Sync Pending Reports Now</button></div>
 
   <h3 class="sectiontitle">Shift Performance</h3>
   <div class="grid2">
@@ -197,7 +203,7 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
     <div class="actions"><button class="good" id="saveEntryBtn" onclick="saveEntry()">Save Entry</button><button onclick="clearEntry()">Clear</button><button id="cancelEntryEditBtn" style="display:none" onclick="cancelEntryEdit()">Cancel Edit</button></div>
   </div>
 
-  <h3 class="sectiontitle">Saved Entries</h3>
+  <h3 id="savedEntriesSearch" class="sectiontitle">Saved Entries — Search / Edit / Delete</h3>
   <div class="card search-panel">
     <div class="formgrid">
       <div><label>Quick Search</label><input id="entrySearch" placeholder="Operator name/code, Job, Part No, Machine"></div>
@@ -215,7 +221,7 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
 
 <section id="operators" class="page">
   <div class="card">
-    <h2>Operator Master</h2>
+    <h2>Operator Master — Add / Edit</h2>
     <div class="formgrid">
       <div><label>Employee Code</label><input id="opCode"></div>
       <div><label>Operator Name</label><input id="opName"></div>
@@ -224,7 +230,15 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
       <div><label>Out Time</label><input id="opOut" type="time"></div>
       <div><label>Phone (optional)</label><input id="opPhone"></div>
     </div>
-    <div class="actions"><button class="good" onclick="addOperator()">Add Operator</button></div>
+    <div id="operatorEditBanner" class="notice edit-banner">Operator edit mode — Employee Code மாற்றப்படாது; Update Operator அழுத்தி சேமிக்கவும்.</div>
+    <div class="actions"><button class="good" id="saveOperatorBtn" onclick="addOperator()">Add Operator</button><button id="cancelOperatorEditBtn" style="display:none" onclick="cancelOperatorEdit()">Cancel Edit</button></div>
+  </div>
+  <div class="card search-panel">
+    <div class="formgrid">
+      <div><label>Search Operator</label><input id="operatorSearch" placeholder="Name, employee code, shift or phone"></div>
+      <div class="search-count" id="operatorSearchCount">0 operators</div>
+    </div>
+    <div class="actions"><button onclick="clearOperatorSearch()">Clear Search</button></div>
   </div>
   <div class="card tablebox" style="margin-top:14px">
     <table><thead><tr><th>Code</th><th>Name</th><th>Shift</th><th>In Time</th><th>Out Time</th><th>Phone</th><th></th></tr></thead><tbody id="operatorRows"></tbody></table>
@@ -337,6 +351,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&l
 function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function today(){const d=new Date(),z=d.getTimezoneOffset()*60000;return new Date(d-z).toISOString().slice(0,10)}
 function showPage(id){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');refreshAll()}
+function openEntrySearch(){showPage('entry');setTimeout(()=>{document.getElementById('savedEntriesSearch').scrollIntoView({behavior:'smooth',block:'start'});entrySearch.focus()},0)}
 function target(cycle,hours){cycle=+cycle||0;hours=+hours||0;return cycle>0?(hours*60)/cycle:0}
 function pct(actual,t){return t>0?(actual/t*100):0}
 function entryInserts(x){
@@ -533,12 +548,30 @@ for(let n=1;n<=3;n++){
 }
 ['eOperator',...Array.from({length:6},(_,i)=>'eInsert'+(i+1)),...Array.from({length:6},(_,i)=>'eQty'+(i+1))].forEach(id=>document.getElementById(id).addEventListener('input',calcEntry));
 
+let editingOperatorCode=null;
+function resetOperatorForm(){
+ editingOperatorCode=null;opCode.disabled=false;opCode.value=opName.value=opPhone.value=opIn.value=opOut.value='';opShift.value='A';
+ saveOperatorBtn.textContent='Add Operator';cancelOperatorEditBtn.style.display='none';operatorEditBanner.classList.remove('active')
+}
+function cancelOperatorEdit(){resetOperatorForm()}
 function addOperator(){
  const db=loadDB(),code=opCode.value.trim(),name=opName.value.trim();
  if(!code||!name)return alert('Employee Code மற்றும் Operator Name கொடுக்கவும்.');
- if(db.operators.some(x=>x.code.toLowerCase()===code.toLowerCase()))return alert('இந்த Employee Code ஏற்கனவே உள்ளது.');
- db.operators.push({code,name,shift:opShift.value,inTime:opIn.value,outTime:opOut.value,phone:opPhone.value.trim()});saveDB(db);
- opCode.value=opName.value=opPhone.value=opIn.value=opOut.value='';refreshAll()
+ const record={code,name,shift:opShift.value,inTime:opIn.value,outTime:opOut.value,phone:opPhone.value.trim()};
+ if(editingOperatorCode!==null){
+  const i=db.operators.findIndex(x=>String(x.code)===String(editingOperatorCode));if(i<0)return alert('Edit செய்யும் Operator கிடைக்கவில்லை.');
+  const oldName=db.operators[i].name;db.operators[i]={...db.operators[i],...record,code:editingOperatorCode};
+  if(oldName!==name)db.entries=db.entries.map(x=>x.operatorCode===editingOperatorCode?{...x,operatorName:name}:x);
+  saveDB(db);resetOperatorForm();refreshAll();alert('Operator updated successfully.');return
+ }
+ if(db.operators.some(x=>String(x.code).toLowerCase()===code.toLowerCase()))return alert('இந்த Employee Code ஏற்கனவே உள்ளது. Edit button பயன்படுத்தவும்.');
+ db.operators.push(record);saveDB(db);resetOperatorForm();refreshAll()
+}
+function editOperator(code){
+ const x=loadDB().operators.find(o=>String(o.code)===String(code));if(!x)return alert('Operator கிடைக்கவில்லை.');
+ editingOperatorCode=x.code;opCode.value=x.code;opCode.disabled=true;opName.value=x.name||'';opShift.value=x.shift||'A';opIn.value=x.inTime||'';opOut.value=x.outTime||'';opPhone.value=x.phone||'';
+ saveOperatorBtn.textContent='Update Operator';cancelOperatorEditBtn.style.display='inline-block';operatorEditBanner.classList.add('active');
+ document.getElementById('operators').scrollIntoView({behavior:'smooth',block:'start'})
 }
 function addInsert(){
  const db=loadDB(),code=iCode.value.trim(),name=iName.value.trim();
@@ -617,17 +650,20 @@ function editEntry(id){
  eQuality.value=x.quality||'';eReject.value=x.reject||'';editingEntryId=x.id;saveEntryBtn.textContent='Update Entry';cancelEntryEditBtn.style.display='inline-block';entryEditBanner.classList.add('active');
  calcEntry();document.getElementById('entry').scrollIntoView({behavior:'smooth',block:'start'})
 }
-function delOperator(code){if(!confirm('Operator delete செய்யவா?'))return;const db=loadDB();db.operators=db.operators.filter(x=>x.code!==code);saveDB(db);refreshAll()}
+function delOperator(code){if(!confirm('இந்த Operator பெயரை delete செய்யவா? பழைய job reports delete ஆகாது.'))return;const db=loadDB();db.operators=db.operators.filter(x=>String(x.code)!==String(code));saveDB(db);if(String(editingOperatorCode)===String(code))resetOperatorForm();refreshAll()}
 function delInsert(code){if(!confirm('Insert master delete செய்யவா?'))return;const db=loadDB();db.inserts=db.inserts.filter(x=>x.code!==code);saveDB(db);refreshAll()}
 function delEntry(id){if(!confirm('இந்த entry delete செய்யவா?'))return;const db=loadDB();db.entries=db.entries.filter(x=>x.id!==id);saveDB(db);refreshAll()}
 
 function renderOperators(){
- const db=loadDB();
- operatorRows.innerHTML=db.operators.map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.shift)}</td><td>${esc(format12(x.inTime||''))}</td><td>${esc(format12(x.outTime||''))}</td><td>${esc(x.phone)}</td><td><button class="danger" onclick="delOperator('${esc(x.code)}')">Delete</button></td></tr>`).join('');
+ const db=loadDB(),searchBox=document.getElementById('operatorSearch'),q=(searchBox?.value||'').trim().toLowerCase();
+ const rows=db.operators.filter(x=>!q||[x.code,x.name,x.shift,x.phone].join(' ').toLowerCase().includes(q));
+ operatorSearchCount.textContent=`${rows.length} / ${db.operators.length} operators`;
+ operatorRows.innerHTML=rows.map(x=>{const key=encodeURIComponent(String(x.code));return `<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.shift)}</td><td>${esc(format12(x.inTime||''))}</td><td>${esc(format12(x.outTime||''))}</td><td>${esc(x.phone)}</td><td><button class="primary" onclick="editOperator(decodeURIComponent('${key}'))">Edit</button> <button class="danger" onclick="delOperator(decodeURIComponent('${key}'))">Delete</button></td></tr>`}).join('')||'<tr><td colspan="7" class="muted">Search-க்கு பொருந்தும் Operator இல்லை.</td></tr>';
  const selected=eOperator.value,filter=entryOperatorFilter.value,options=db.operators.map(x=>`<option value="${esc(x.code)}">${esc(x.code)} - ${esc(x.name)}</option>`).join('');
  eOperator.innerHTML='<option value="">Select Operator</option>'+options;if(db.operators.some(x=>x.code===selected))eOperator.value=selected;
  entryOperatorFilter.innerHTML='<option value="">All Operators</option>'+options;if(db.operators.some(x=>x.code===filter))entryOperatorFilter.value=filter
 }
+function clearOperatorSearch(){operatorSearch.value='';renderOperators()}
 function renderInserts(){
  const db=loadDB();
  insertRows.innerHTML=db.inserts.map(x=>{
@@ -859,6 +895,7 @@ loadDeadlineSettingsUI();
 setInterval(()=>renderReportAlerts(),60000);
 entrySearch.addEventListener('input',renderEntries);
 [entryOperatorFilter,entryDateFrom,entryDateTo].forEach(el=>el.addEventListener('change',renderEntries));
+operatorSearch.addEventListener('input',renderOperators);
 
 function refreshAll(){renderOperators();renderInserts();renderEntries();renderDashboard();renderReportAlerts();renderMessageCenter();calcEntry()}
 dashDate.value=eDate.value=stockDate.value=today();refreshAll();
@@ -883,6 +920,43 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
     if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
     const db=firebase.database();
     window.cloudDB=db; window.cloudDBReady=true;
+
+    const syncSummary=document.getElementById('pendingSyncSummary');
+    let pendingSyncRunning=false;
+    function setSyncSummary(text,state=''){
+      if(!syncSummary)return;syncSummary.textContent=text;syncSummary.className='card sync-box'+(state?' '+state:'')
+    }
+    function normalizeOperatorSubmission(raw,key){
+      if(!raw||typeof raw!=='object')return null;
+      const keyText=String(key||'unknown'),hash=[...keyText].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,0);
+      const numericId=Number(raw.id),id=Number.isFinite(numericId)&&numericId>0?numericId:1700000000000+hash;
+      return {...raw,id,sourceId:String(raw.sourceId||('LEGACY-'+keyText)),updatedAt:raw.updatedAt||raw.submittedAt||new Date().toISOString()}
+    }
+    async function processOperatorSubmission(snap){
+      const entry=normalizeOperatorSubmission(snap.val(),snap.key);if(!entry)throw new Error('Invalid pending report');
+      const result=await db.ref('cncManager/db/entries').transaction(raw=>{
+        const entries=asArray(raw),i=entries.findIndex(x=>x&&((x.sourceId&&x.sourceId===entry.sourceId)||String(x.id)===String(entry.id)));
+        if(i>=0)entries[i]={...entries[i],...entry};else entries.push(entry);
+        return entries
+      });
+      if(!result||result.committed!==true)throw new Error('Firebase entry transaction not committed');
+      await snap.ref.remove();return entry
+    }
+    async function syncPendingReports(manual=false){
+      if(pendingSyncRunning){if(manual)setSyncSummary('Sync already running — please wait.','warn');return}
+      pendingSyncRunning=true;setSyncSummary('Pending operator reports checking...');
+      try{
+        const queue=await db.ref('cncManager/operatorSubmissions').once('value'),items=[];queue.forEach(s=>{items.push(s)});
+        if(!items.length){setSyncSummary('All operator reports synced — 0 pending.','ok');return}
+        setSyncSummary(`${items.length} pending report(s) found — syncing...`,'warn');
+        let synced=0,failed=0;for(const snap of items){try{await processOperatorSubmission(snap);synced++}catch(e){failed++;console.error('Pending operator report sync failed',snap.key,e)}}
+        const remaining=(await db.ref('cncManager/operatorSubmissions').once('value')).numChildren();
+        setSyncSummary(failed?`${synced} report(s) synced; ${remaining} pending. Retry button அழுத்தவும்.`:`${synced} report(s) synced successfully — ${remaining} pending.`,failed?'warn':'ok');
+        if(failed)setStatus('Cloud: operator report pending');else setStatus('Cloud: LIVE')
+      }catch(e){console.error(e);setSyncSummary('Pending report sync error: '+e.message,'warn');setStatus('Cloud: operator report pending')}
+      finally{pendingSyncRunning=false}
+    }
+    window.forcePendingSync=()=>syncPendingReports(true);
 
     db.ref('cncManager/settings/reportDeadlines').once('value').then(s=>{
       if(!s.exists()) db.ref('cncManager/settings/reportDeadlines').set(getDeadlineSettings());
@@ -913,16 +987,8 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
       }
     });
 
-    db.ref('cncManager/operatorSubmissions').on('child_added', snap=>{
-      const entry=snap.val();
-      if(!entry || !entry.sourceId) return;
-      db.ref('cncManager/db/entries').transaction(raw=>{
-        const entries=asArray(raw);
-        const i=entries.findIndex(x=>x&&((entry.sourceId&&x.sourceId===entry.sourceId)||String(x.id)===String(entry.id)));
-        if(i>=0)entries[i]={...entries[i],...entry};else entries.push(entry);
-        return entries
-      }).then(()=>snap.ref.remove()).catch(e=>{console.error('Pending operator report sync failed',e);setStatus('Cloud: operator report pending')})
-    });
+    db.ref('cncManager/operatorSubmissions').on('child_added',()=>syncPendingReports(false));
+    syncPendingReports(false);setInterval(()=>syncPendingReports(false),15000);
 
     setStatus('Cloud: LIVE');
   }catch(e){
@@ -930,7 +996,7 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
   }
 
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+    navigator.serviceWorker.register('./service-worker.js?v=29',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
   }
 })();
 }
