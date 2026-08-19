@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#15324b">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>CNC PRO V23 Multi-Job Operator</title>
-<link rel="manifest" href="./operator-manifest.json?v=29">
+<link rel="manifest" href="./operator-manifest.json?v=29.1">
 <style>
 :root{--bg:#f4f7fb;--card:#fff;--ink:#17212b;--muted:#64748b;--primary:#15324b;--good:#087f5b;--bad:#b42318;--line:#dbe3ec}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Tamil",sans-serif;background:var(--bg);color:var(--ink)}
@@ -28,9 +28,9 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
-<script src="./firebase-config.js?v=29"></script>
-<script src="./access-config.js?v=29"></script>
-<script src="./access-control.js?v=29"></script>
+<script src="./firebase-config.js?v=29.1"></script>
+<script src="./access-config.js?v=29.1"></script>
+<script src="./access-control.js?v=29.1"></script>
 <script>window.CNCAuth.guard('operator');</script>
 </head>
 <body>
@@ -362,6 +362,9 @@ async function syncOperatorEntry(entry){
       return entries
     });
     if(!result||result.committed!==true)throw new Error('Firebase entry transaction not committed');
+    const verify=await cloudDB.ref('cncManager/db/entries').once('value');
+    const verified=asArray(verify.val()).some(x=>x&&((entry.sourceId&&x.sourceId===entry.sourceId)||String(x.id)===String(entry.id)));
+    if(!verified)throw new Error('Saved report could not be verified in Admin data');
     if(queued)await queueRef.remove().catch(()=>{});
     return 'direct'
   }catch(directError){
@@ -443,7 +446,7 @@ if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey){
 }else{
   statusEl.className='notice err';statusEl.textContent='Firebase config இன்னும் சேர்க்கவில்லை.';
 }
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=29',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=29.1',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});}
 }
 </script>
 <script>

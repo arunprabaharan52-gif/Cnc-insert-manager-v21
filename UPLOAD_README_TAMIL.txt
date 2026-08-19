@@ -1,4 +1,4 @@
-CNC PRO V23 V29 — OPERATOR REPORT REPAIR / OPERATOR EDIT / SEARCH FIX
+CNC PRO V23 V29.1 — ADMIN LIVE OPERATOR REPORT DISPLAY FIX
 
 GitHub repository root-ல் ZIP-ஐ extract செய்து கீழே உள்ள files அனைத்தையும் replace/upload செய்யவும்:
 1. index.html
@@ -14,6 +14,11 @@ GitHub repository root-ல் ZIP-ஐ extract செய்து கீழே �
 11. firebase-messaging-sw.js
 
 இந்த update-ல்:
+- Operator report Firebase-ல் save ஆனவுடன் Admin Saved Entries மற்றும் Dashboard உடனடியாக live refresh ஆகும்.
+- Admin-ல் “View Received Operator Reports” button மூலம் வந்த report-களை நேரடியாக பார்க்கலாம்.
+- Cloud Sync box-ல் received operator report count மற்றும் latest report விவரம் தெரியும்.
+- Operator page success காட்டும் முன் report Admin data-ல் உண்மையில் save ஆகியிருக்கிறதா verify செய்யப்படும்.
+- V29-ன் மற்ற வசதிகள் மற்றும் பழைய data எதுவும் மாற்றப்படவில்லை.
 - Operator report முதலில் safe pending queue-ல் சேமிக்கப்பட்டு, main Firebase entries-க்கு atomic sync ஆகும்.
 - Firebase transaction உண்மையில் committed ஆனதா சரிபார்க்கப்படும்; தவறான success message இனி வராது.
 - sourceId இல்லாத பழைய pending reports-க்கும் V29 தானாக ID உருவாக்கி Admin entries-ல் சேர்க்கும்.
@@ -24,7 +29,7 @@ GitHub repository root-ல் ZIP-ஐ extract செய்து கீழே �
 - Operator-க்கு My Recent Reports / Edit வசதி உள்ளது.
 - Admin password மற்றும் Operator password தனித்தனியாக மாற்றலாம்.
 - Admin page-ல் Admin password-ஐயும் Operator password-ஐயும் மாற்றலாம்; Operator page-ல் Operator password மாற்றலாம்.
-- Header-ல் V29 badge இருக்கும்; புதிய service-worker cache version பழைய HTML/cache-ஐ நீக்கும்.
+- Header-ல் V29 badge இருக்கும்; புதிய V29.1 service-worker cache பழைய HTML/cache-ஐ நீக்கும்.
 
 முக்கியம்: ZIP file-ஐ மட்டும் upload செய்ய வேண்டாம். ZIP-ஐ extract செய்து மேலே உள்ள 11 files-ஐ repository root-ல் Replace செய்து Commit changes அழுத்தவும்.
 Commit முடிந்தபின் page header-ல் V29 badge தெரிகிறதா சரிபார்க்கவும்.

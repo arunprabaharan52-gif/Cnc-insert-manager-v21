@@ -43,11 +43,11 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
-<script src="./firebase-config.js?v=29"></script>
-<script src="./access-config.js?v=29"></script>
-<script src="./access-control.js?v=29"></script>
+<script src="./firebase-config.js?v=29.1"></script>
+<script src="./access-config.js?v=29.1"></script>
+<script src="./access-control.js?v=29.1"></script>
 <script>window.CNCAuth.guard('admin');</script>
-<link rel="manifest" href="./manifest.json?v=29">
+<link rel="manifest" href="./manifest.json?v=29.1">
 
 </head>
 <body>
@@ -79,7 +79,7 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
 
   <h3 class="sectiontitle">Operator Report Cloud Sync</h3>
   <div id="pendingSyncSummary" class="card sync-box">Pending operator reports checking...</div>
-  <div class="actions no-print"><button class="primary" onclick="window.forcePendingSync&&window.forcePendingSync()">Sync Pending Reports Now</button></div>
+  <div class="actions no-print"><button class="primary" onclick="window.forcePendingSync&&window.forcePendingSync()">Sync Pending Reports Now</button><button class="good" onclick="clearEntrySearch();openEntrySearch()">View Received Operator Reports</button></div>
 
   <h3 class="sectiontitle">Shift Performance</h3>
   <div class="grid2">
@@ -926,6 +926,12 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
     function setSyncSummary(text,state=''){
       if(!syncSummary)return;syncSummary.textContent=text;syncSummary.className='card sync-box'+(state?' '+state:'')
     }
+    function receivedReportSummary(entries){
+      const received=asArray(entries).filter(x=>x&&x.sourceId),latest=[...received].sort((a,b)=>String(b.updatedAt||b.submittedAt||'').localeCompare(String(a.updatedAt||a.submittedAt||'')))[0];
+      if(!latest)return 'All operator reports synced — 0 pending; no operator report received yet.';
+      const detail=[latest.date,latest.operatorName,latest.job].filter(Boolean).join(' — ');
+      return `All operator reports synced — 0 pending; ${received.length} operator report(s) received. Latest: ${detail}`
+    }
     function normalizeOperatorSubmission(raw,key){
       if(!raw||typeof raw!=='object')return null;
       const keyText=String(key||'unknown'),hash=[...keyText].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,0);
@@ -947,7 +953,7 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
       pendingSyncRunning=true;setSyncSummary('Pending operator reports checking...');
       try{
         const queue=await db.ref('cncManager/operatorSubmissions').once('value'),items=[];queue.forEach(s=>{items.push(s)});
-        if(!items.length){setSyncSummary('All operator reports synced — 0 pending.','ok');return}
+        if(!items.length){const entries=await db.ref('cncManager/db/entries').once('value');setSyncSummary(receivedReportSummary(entries.val()),'ok');return}
         setSyncSummary(`${items.length} pending report(s) found — syncing...`,'warn');
         let synced=0,failed=0;for(const snap of items){try{await processOperatorSubmission(snap);synced++}catch(e){failed++;console.error('Pending operator report sync failed',snap.key,e)}}
         const remaining=(await db.ref('cncManager/operatorSubmissions').once('value')).numChildren();
@@ -978,6 +984,17 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
       }
     },()=>setStatus('Cloud: permission/error'));
 
+    // A dedicated entries listener keeps Operator reports visible immediately,
+    // even if another Admin dashboard section fails while rendering.
+    db.ref('cncManager/db/entries').on('value',s=>{
+      const local=loadDB();local.entries=asArray(s.val());localStorage.setItem(KEY,JSON.stringify(local));
+      try{renderEntries()}catch(e){console.error('Live entry table refresh failed',e)}
+      try{renderDashboard()}catch(e){console.error('Live dashboard refresh failed',e)}
+      try{renderReportAlerts()}catch(e){console.error('Live report alert refresh failed',e)}
+      setStatus(`Cloud: LIVE • ${local.entries.length} report(s)`);
+      if(!pendingSyncRunning)setSyncSummary(receivedReportSummary(local.entries),'ok')
+    },e=>{console.error('Live operator report listener failed',e);setStatus('Cloud: report sync error')});
+
     
     db.ref('cncManager/settings/reportDeadlines').on('value',s=>{
       if(s.exists()){
@@ -996,7 +1013,7 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
   }
 
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=29',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+    navigator.serviceWorker.register('./service-worker.js?v=29.1',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
   }
 })();
 }
