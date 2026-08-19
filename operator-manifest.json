@@ -3,10 +3,10 @@
   "name": "CNC PRO V23 Operator",
   "short_name": "CNC Operator",
   "description": "CNC Multi-Job Operator Daily Entry",
-  "start_url": "./operator.html?v=29",
+  "start_url": "./operator.html?v=29.2",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f7fb",
   "theme_color": "#15324b",
-  "version": "29"
+  "version": "29.2"
 }

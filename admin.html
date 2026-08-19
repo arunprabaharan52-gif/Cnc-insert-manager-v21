@@ -43,16 +43,16 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
-<script src="./firebase-config.js?v=29.1"></script>
-<script src="./access-config.js?v=29.1"></script>
-<script src="./access-control.js?v=29.1"></script>
+<script src="./firebase-config.js?v=29.2"></script>
+<script src="./access-config.js?v=29.2"></script>
+<script src="./access-control.js?v=29.2"></script>
 <script>window.CNCAuth.guard('admin');</script>
-<link rel="manifest" href="./manifest.json?v=29.1">
+<link rel="manifest" href="./manifest.json?v=29.2">
 
 </head>
 <body>
 <header>
-  <h1>CNC Insert Manager PRO V23 — Multi-Job <span class="version-badge">V29</span></h1>
+  <h1>CNC Insert Manager PRO V23 — Multi-Job <span class="version-badge">V29.2</span></h1>
   <small>Admin Secure Login • 3 Jobs • Multiple Work Sessions • 12-hour AM/PM Time</small>
   <nav>
     <button onclick="showPage('dashboard')">Dashboard</button>
@@ -80,6 +80,14 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
   <h3 class="sectiontitle">Operator Report Cloud Sync</h3>
   <div id="pendingSyncSummary" class="card sync-box">Pending operator reports checking...</div>
   <div class="actions no-print"><button class="primary" onclick="window.forcePendingSync&&window.forcePendingSync()">Sync Pending Reports Now</button><button class="good" onclick="clearEntrySearch();openEntrySearch()">View Received Operator Reports</button></div>
+
+  <h3 class="sectiontitle">Today Received Operator Reports</h3>
+  <div class="card tablebox">
+    <table>
+      <thead><tr><th>Date</th><th>Operator</th><th>Shift</th><th>Machine</th><th>Job</th><th>Net Work</th><th>Target</th><th>Actual Jobs</th><th>Insert Used / Value</th><th>Status</th></tr></thead>
+      <tbody id="todayOperatorReports"></tbody>
+    </table>
+  </div>
 
   <h3 class="sectiontitle">Shift Performance</h3>
   <div class="grid2">
@@ -358,6 +366,18 @@ function entryInserts(x){
  const multi=asArray(x.inserts).filter(i=>i&&i.code);if(multi.length)return multi;
  return x.insertCode?[{code:x.insertCode,name:x.insertName||'',qty:+x.qty||0,unitValue:+x.unitValue||0,value:+x.value||0}]:[]
 }
+function entryTotals(x){
+ const items=entryInserts(x);let itemQty=0,itemValue=0,hasItemQty=false,hasItemValue=false;
+ items.forEach(i=>{
+  const qty=Number(i?.qty),value=Number(i?.value),unitValue=Number(i?.unitValue);
+  if(Number.isFinite(qty)){itemQty+=qty;hasItemQty=true}
+  if(Number.isFinite(value)){itemValue+=value;hasItemValue=true}
+  else if(Number.isFinite(qty)&&Number.isFinite(unitValue)){itemValue+=qty*unitValue;hasItemValue=true}
+ });
+ const topQty=Number(x?.qty),topValue=Number(x?.value);
+ return {qty:hasItemQty?itemQty:(Number.isFinite(topQty)?topQty:0),value:hasItemValue?itemValue:(Number.isFinite(topValue)?topValue:0)}
+}
+function entryDateKey(x){return String(x?.date||'').trim().slice(0,10)}
 function storedJobSessions(j){
  const supplied=asArray(j?.sessions).filter(Boolean);
  if(supplied.length)return supplied.map(s=>{
@@ -705,8 +725,8 @@ function renderEntries(){
  }).join('')||'<tr><td colspan="31" class="muted">Search-க்கு பொருந்தும் entry இல்லை.</td></tr>'
 }
 function renderDashboard(){
- const db=loadDB(),d=dashDate.value||today(),rows=db.entries.filter(x=>x.date===d);
- const used=rows.reduce((a,x)=>a+(+x.qty||0),0),val=rows.reduce((a,x)=>a+(+x.value||0),0),quality=rows.reduce((a,x)=>a+(+x.quality||0),0),reject=rows.reduce((a,x)=>a+(+x.reject||0),0);
+ const db=loadDB(),d=dashDate.value||today(),rows=db.entries.filter(x=>entryDateKey(x)===d),operatorRows=rows.filter(x=>x&&x.sourceId),totals=rows.map(entryTotals);
+ const used=totals.reduce((a,x)=>a+x.qty,0),val=totals.reduce((a,x)=>a+x.value,0),quality=rows.reduce((a,x)=>a+(+x.quality||0),0),reject=rows.reduce((a,x)=>a+(+x.reject||0),0);
  const totalAvailableBeforeToday=db.inserts.reduce((sum,it)=>{
    const stockin=db.stockIn.filter(s=>s.code===it.code).reduce((a,s)=>a+(+s.qty||0),0);
    const usedBefore=db.entries.filter(e=>e.date<d).reduce((sum,e)=>sum+entryInserts(e).filter(i=>i.code===it.code).reduce((a,i)=>a+(+i.qty||0),0),0);
@@ -716,6 +736,7 @@ function renderDashboard(){
  const alerts=db.inserts.filter(x=>currentStock(db,x.code)<= (+x.min||0)).length;
  const remainingTotalValue=db.inserts.reduce((sum,it)=>sum+(currentStock(db,it.code)*(+it.value||0)),0);
  const metrics=[
+ ['Operator Reports Received',operatorRows.length],
  ['Total Insert Stock',totalAvailableBeforeToday],
  ['Today Used Insert',used],
  ['Remaining Insert',remainingAfterToday],
@@ -724,13 +745,23 @@ function renderDashboard(){
  ['Stock Alerts',alerts]
  ];
  kpis.innerHTML=metrics.map(([a,b])=>`<div class="card kpi"><small>${a}</small><b>${b}</b></div>`).join('');
+ const receivedBody=document.getElementById('todayOperatorReports');
+ if(receivedBody){
+  const received=[...operatorRows].sort((a,b)=>String(b.updatedAt||b.submittedAt||'').localeCompare(String(a.updatedAt||a.submittedAt||'')));
+  receivedBody.innerHTML=received.map(x=>{
+   const jobs=entryJobs(x),timeline=entryTimeline(x,jobs),entryTotal=entryTotals(x);
+   const jobNames=jobs.map(j=>j.name).filter(Boolean).join(' / ')||x.job||'-';
+   const insertText=entryInserts(x).map(i=>`${esc(i.code)} × ${+i.qty||0}`).join(', ')||'-';
+   return `<tr><td>${esc(entryDateKey(x))}</td><td><b>${esc(x.operatorName||x.operatorCode||'-')}</b></td><td>${esc(x.shift||'-')}</td><td>${esc(x.machine||'-')}</td><td>${esc(jobNames)}</td><td>${timeline.activeHours.toFixed(2)} h</td><td>${(+x.target||0).toFixed(1)}</td><td>${+x.actual||0}</td><td>${insertText}<br><small>${entryTotal.qty} insert(s) • ${money(entryTotal.value)}</small></td><td><span class="alert-pill alert-good">RECEIVED</span></td></tr>`
+  }).join('')||'<tr><td colspan="10" class="muted">No operator report received for the selected date.</td></tr>'
+ }
  function shiftBox(s){
    const r=rows.filter(x=>x.shift===s),timelines=r.map(x=>entryTimeline(x,entryJobs(x))),presence=timelines.reduce((a,x)=>a+x.presenceHours,0),breakHours=timelines.reduce((a,x)=>a+x.breakMinutes/60,0),work=timelines.reduce((a,x)=>a+x.activeHours,0),t=r.reduce((a,x)=>a+(+x.target||0),0),ac=r.reduce((a,x)=>a+(+x.actual||0),0),p=pct(ac,t);
    return `<p>Presence: <b>${presence.toFixed(2)} h</b> &nbsp; Actual Break: <b>${breakHours.toFixed(2)} h</b> &nbsp; Net Work: <b>${work.toFixed(2)} h</b></p><p>Overall Percentage: <b class="${p>=100?'goodtxt':p>=80?'warntxt':'badtxt'}">${p.toFixed(1)}%</b></p>`
  }
  shiftA.innerHTML=shiftBox('A');shiftB.innerHTML=shiftBox('B');
 
- const ops={};rows.forEach(x=>{const k=x.operatorCode,timeline=entryTimeline(x,entryJobs(x));ops[k]??={name:x.operatorName,code:k,shift:x.shift,presence:0,breakMinutes:0,work:0,target:0,actual:0,qty:0,value:0};ops[k].presence+=timeline.presenceHours;ops[k].breakMinutes+=timeline.breakMinutes;ops[k].work+=timeline.activeHours;ops[k].target+=+x.target||0;ops[k].actual+=+x.actual||0;ops[k].qty+=+x.qty||0;ops[k].value+=+x.value||0});
+ const ops={};rows.forEach(x=>{const k=x.operatorCode,timeline=entryTimeline(x,entryJobs(x)),entryTotal=entryTotals(x);ops[k]??={name:x.operatorName,code:k,shift:x.shift,presence:0,breakMinutes:0,work:0,target:0,actual:0,qty:0,value:0};ops[k].presence+=timeline.presenceHours;ops[k].breakMinutes+=timeline.breakMinutes;ops[k].work+=timeline.activeHours;ops[k].target+=+x.target||0;ops[k].actual+=+x.actual||0;ops[k].qty+=entryTotal.qty;ops[k].value+=entryTotal.value});
  operatorPerf.innerHTML=Object.values(ops).map(x=>{const p=pct(x.actual,x.target);return `<tr><td>${esc(x.name)}</td><td>${esc(x.code)}</td><td>${x.shift}</td><td>${x.presence.toFixed(2)} h</td><td>${(x.breakMinutes/60).toFixed(2)} h</td><td>${x.work.toFixed(2)} h</td><td>${x.target.toFixed(1)}</td><td>${x.actual}</td><td class="${p>=100?'goodtxt':p>=80?'warntxt':'badtxt'}">${p.toFixed(1)}%</td><td>${x.qty}</td><td>${money(x.value)}</td></tr>`}).join('')||'<tr><td colspan="11" class="muted">No data for selected date</td></tr>';
 
  insertSummary.innerHTML=db.inserts.map(it=>{
@@ -1013,7 +1044,7 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
   }
 
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=29.1',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+    navigator.serviceWorker.register('./service-worker.js?v=29.2',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
   }
 })();
 }
