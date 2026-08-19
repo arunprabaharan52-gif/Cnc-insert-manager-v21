@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#15324b">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>CNC PRO V23 Multi-Job Operator</title>
-<link rel="manifest" href="./operator-manifest.json?v=29.2">
+<link rel="manifest" href="./operator-manifest.json?v=30.0">
 <style>
 :root{--bg:#f4f7fb;--card:#fff;--ink:#17212b;--muted:#64748b;--primary:#15324b;--good:#087f5b;--bad:#b42318;--line:#dbe3ec}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Tamil",sans-serif;background:var(--bg);color:var(--ink)}
@@ -28,13 +28,13 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
-<script src="./firebase-config.js?v=29.2"></script>
-<script src="./access-config.js?v=29.2"></script>
-<script src="./access-control.js?v=29.2"></script>
+<script src="./firebase-config.js?v=30.0"></script>
+<script src="./access-config.js?v=30.0"></script>
+<script src="./access-control.js?v=30.0"></script>
 <script>window.CNCAuth.guard('operator');</script>
 </head>
 <body>
-<header><h1>CNC Daily Operator Report — Multi-Job <span class="version-badge">V29.2</span></h1><small>Operator Secure Login • Entry Page Only • 12-hour AM/PM Time</small><div class="header-actions"><button onclick="CNCAuth.openPasswordDialog('operator','operator')">Change Password</button><button onclick="CNCAuth.logout('operator')">Logout</button></div></header>
+<header><h1>CNC Daily Operator Report — Multi-Job <span class="version-badge">V30.0</span></h1><small>Operator Secure Login • Entry Page Only • 12-hour AM/PM Time</small><div class="header-actions"><button onclick="CNCAuth.openPasswordDialog('operator','operator')">Change Password</button><button onclick="CNCAuth.logout('operator')">Logout</button></div></header>
 <div class="container">
 <div class="card">
   <div id="status" class="notice">Cloud connection checking...</div>
@@ -107,10 +107,30 @@ button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer}.good{backgro
 <script>
 if(window.CNCAuth&&window.CNCAuth.isAuthorized('operator')){
 let cloudDB=null, master={operators:[],inserts:[],entries:[],stockIn:[]};
+const OPERATOR_REPORTS_CACHE_KEY='cnc_operator_reports_v30';
 const statusEl=document.getElementById('status');
 const today=()=>{const d=new Date(),z=d.getTimezoneOffset()*60000;return new Date(d-z).toISOString().slice(0,10)};
 const asArray=v=>Array.isArray(v)?v:Object.values(v||{}).filter(Boolean);
-function normalizeMaster(d){d=(d&&typeof d==='object')?d:{};return {operators:asArray(d.operators),inserts:asArray(d.inserts),entries:asArray(d.entries),stockIn:asArray(d.stockIn)}}
+function entryIdentity(x){
+ if(x?.sourceId)return 'source:'+String(x.sourceId);
+ if(x?.id!==undefined&&x?.id!==null)return 'id:'+String(x.id);
+ return ''
+}
+function mergeEntries(...groups){
+ const merged=[],positions=new Map();
+ groups.flatMap(asArray).filter(x=>x&&typeof x==='object').forEach(x=>{
+  const key=entryIdentity(x);
+  if(key&&positions.has(key)){const i=positions.get(key);merged[i]={...merged[i],...x}}
+  else{if(key)positions.set(key,merged.length);merged.push(x)}
+ });
+ return merged
+}
+function cachedOperatorReports(){
+ try{return asArray(JSON.parse(localStorage.getItem(OPERATOR_REPORTS_CACHE_KEY))||[])}catch(e){return []}
+}
+function cacheOperatorReports(reports){localStorage.setItem(OPERATOR_REPORTS_CACHE_KEY,JSON.stringify(asArray(reports)))}
+function firebaseSafeKey(value){return String(value||'').replace(/[.#$\/\[\]]/g,'_')}
+function normalizeMaster(d){d=(d&&typeof d==='object')?d:{};return {operators:asArray(d.operators),inserts:asArray(d.inserts),entries:mergeEntries(asArray(d.entries),cachedOperatorReports()),stockIn:asArray(d.stockIn)}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 
 eDate.value=today();
@@ -351,10 +371,19 @@ async function enableOperatorAlerts(){
 }
 
 async function syncOperatorEntry(entry){
-  const queueKey=String(entry.sourceId||entry.id||Date.now()).replace(/[.#$\/\[\]]/g,'_');
+  const queueKey=firebaseSafeKey(entry.sourceId||entry.id||Date.now());
+  const canonicalRef=cloudDB.ref('cncManager/operatorReports/'+queueKey);
   const queueRef=cloudDB.ref('cncManager/operatorSubmissions/'+queueKey);
-  let queued=false,queueError=null;
-  try{await queueRef.set({...entry,pendingSyncAt:new Date().toISOString()});queued=true}catch(e){queueError=e;console.warn('Pending queue write failed',e)}
+  const cloudEntry={...entry,receiptId:queueKey,receivedAt:new Date().toISOString()};
+  let canonicalSaved=false,canonicalError=null;
+  try{
+    await canonicalRef.set(cloudEntry);
+    const canonicalVerify=await canonicalRef.once('value');
+    canonicalSaved=canonicalVerify.exists()&&String(canonicalVerify.val()?.sourceId||'')===String(entry.sourceId||'');
+    if(!canonicalSaved)throw new Error('Operator report receipt verification failed');
+  }catch(e){canonicalError=e;console.warn('Durable operator report write failed',e)}
+
+  let mirrored=false,mirrorError=null;
   try{
     const result=await cloudDB.ref('cncManager/db/entries').transaction(raw=>{
       const entries=asArray(raw),i=entries.findIndex(x=>x&&((entry.sourceId&&x.sourceId===entry.sourceId)||String(x.id)===String(entry.id)));
@@ -365,16 +394,21 @@ async function syncOperatorEntry(entry){
     const verify=await cloudDB.ref('cncManager/db/entries').once('value');
     const verified=asArray(verify.val()).some(x=>x&&((entry.sourceId&&x.sourceId===entry.sourceId)||String(x.id)===String(entry.id)));
     if(!verified)throw new Error('Saved report could not be verified in Admin data');
-    if(queued)await queueRef.remove().catch(()=>{});
-    return 'direct'
-  }catch(directError){
-    console.warn('Direct entry sync failed; using pending queue',directError);
-    if(!queued){
-      try{await cloudDB.ref('cncManager/operatorSubmissions').push({...entry,pendingSyncAt:new Date().toISOString()});queued=true}
-      catch(fallbackError){throw new Error('Direct sync: '+directError.message+'; Pending queue: '+(queueError?.message||fallbackError.message))}
-    }
-    return 'queue'
+    mirrored=true
+  }catch(e){mirrorError=e;console.warn('Admin entry mirror failed',e)}
+
+  if(canonicalSaved){
+    if(mirrored)await queueRef.remove().catch(()=>{});
+    else await queueRef.set({...cloudEntry,pendingSyncAt:new Date().toISOString()}).catch(e=>console.warn('Pending mirror queue failed',e));
+    return {mode:mirrored?'direct':'durable',receipt:queueKey}
   }
+
+  // Backward-compatible fallback for older Firebase layouts.
+  let queued=false,queueError=null;
+  try{await queueRef.set({...cloudEntry,pendingSyncAt:new Date().toISOString()});queued=true}catch(e){queueError=e;console.warn('Pending queue write failed',e)}
+  if(mirrored)return {mode:'legacy-direct',receipt:queueKey};
+  if(queued)return {mode:'queue',receipt:queueKey};
+  throw new Error('Durable report: '+(canonicalError?.message||'failed')+'; Admin mirror: '+(mirrorError?.message||'failed')+'; Pending queue: '+(queueError?.message||'failed'))
 }
 
 async function sendReport(){
@@ -414,8 +448,10 @@ async function sendReport(){
   if(entry.submittedAt===undefined)delete entry.submittedAt;
   sendBtn.disabled=true; sendBtn.textContent='Sending...';
   try{
-    const mode=await syncOperatorEntry(entry);
-    statusEl.className='notice ok';statusEl.textContent=mode==='direct'?'Report synced successfully — Admin Dashboard-ல் உடனே சேர்க்கப்பட்டது.':'Report safely queued — Admin Auto Sync / Sync Pending Reports மூலம் சேர்க்கப்படும்.';
+    const result=await syncOperatorEntry(entry);
+    statusEl.className='notice ok';statusEl.textContent=(result.mode==='direct'||result.mode==='durable'||result.mode==='legacy-direct')
+      ?`REPORT RECEIVED — Receipt: ${result.receipt}. Admin Dashboard-ல் இந்த report பாதுகாப்பாக உள்ளது.`
+      :`REPORT QUEUED — Receipt: ${result.receipt}. Admin Auto Sync மூலம் சேர்க்கப்படும்.`;
     resetReportForm();
   }catch(e){statusEl.className='notice err';statusEl.textContent='Send failed: '+e.message}
   finally{sendBtn.disabled=false;sendBtn.textContent=editingReportId===null?'Send Daily Report':'Update Daily Report';}
@@ -442,11 +478,15 @@ if(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey){
       }
       else{statusEl.textContent='Admin master data இன்னும் upload ஆகவில்லை.'}
     },e=>{statusEl.className='notice err';statusEl.textContent='Cloud permission/error';});
+    cloudDB.ref('cncManager/operatorReports').on('value',s=>{
+      const reports=Object.entries(s.val()||{}).map(([key,raw])=>raw&&typeof raw==='object'?{...raw,sourceId:String(raw.sourceId||('LEGACY-'+key))}:null).filter(Boolean);
+      cacheOperatorReports(reports);master.entries=mergeEntries(master.entries,reports);operatorReportStatus();renderMyReports()
+    },e=>console.warn('Operator report receipt listener failed',e));
   }catch(e){statusEl.className='notice err';statusEl.textContent='Firebase setup error';}
 }else{
   statusEl.className='notice err';statusEl.textContent='Firebase config இன்னும் சேர்க்கவில்லை.';
 }
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=29.2',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=30.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});}
 }
 </script>
 <script>

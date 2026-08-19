@@ -1,4 +1,4 @@
-CNC PRO V23 V29.2 — ADMIN DASHBOARD OPERATOR REPORT CALCULATION FIX
+CNC PRO V23 V30.0 — DURABLE OPERATOR REPORT CLOUD FIX
 
 GitHub repository root-ல் ZIP-ஐ extract செய்து கீழே உள்ள files அனைத்தையும் replace/upload செய்யவும்:
 1. index.html
@@ -14,6 +14,11 @@ GitHub repository root-ல் ZIP-ஐ extract செய்து கீழே �
 11. firebase-messaging-sw.js
 
 இந்த update-ல்:
+- Operator report இனி `cncManager/operatorReports` என்ற தனி நிரந்தர Cloud பாதையில் முதலில் save ஆகி, Firebase-லிருந்து மீண்டும் படித்து verify செய்த பிறகே success காட்டப்படும்.
+- ஒவ்வொரு வெற்றிகரமான report-க்கும் `REPORT RECEIVED` மற்றும் தனி Receipt ID Operator screen-ல் காட்டப்படும்.
+- Admin Dashboard தனி Operator Reports Cloud பாதையை நேரடியாக live-ஆக படிக்கும்; Admin database save நடந்தாலும் Operator report அழியாது.
+- பழைய `operatorSubmissions` pending queue மற்றும் `cncManager/db/entries` mirror இரண்டும் backward compatibility-க்காக தொடர்கின்றன.
+- Admin மற்றும் Operator இரண்டிலும் durable reports local cache-உடன் merge செய்யப்படுவதால் duplicate இல்லாமல் உடனடியாக தெரியும்.
 - Admin-க்கு ஏற்கனவே வந்த Operator report-ன் nested insert Qty/Value இப்போது Dashboard கணக்கில் சரியாக சேரும்; `Today Used Insert` மற்றும் அதன் value இனி தவறாக 0 காட்டாது.
 - Dashboard மேலே `Operator Reports Received` count காட்டப்படும்.
 - தேர்ந்தெடுத்த தேதிக்கான Operator, Shift, Machine, Job, Net Work, Target, Actual Jobs, Insert Qty/Value ஆகியவை `Today Received Operator Reports` table-ல் உடனடியாக தெரியும்.
@@ -32,10 +37,10 @@ GitHub repository root-ல் ZIP-ஐ extract செய்து கீழே �
 - Operator-க்கு My Recent Reports / Edit வசதி உள்ளது.
 - Admin password மற்றும் Operator password தனித்தனியாக மாற்றலாம்.
 - Admin page-ல் Admin password-ஐயும் Operator password-ஐயும் மாற்றலாம்; Operator page-ல் Operator password மாற்றலாம்.
-- Header-ல் V29.2 badge இருக்கும்; புதிய V29.2 service-worker cache பழைய HTML/cache-ஐ நீக்கும்.
+- Header-ல் V30.0 badge இருக்கும்; புதிய V30.0 service-worker cache பழைய HTML/cache-ஐ நீக்கும்.
 
 முக்கியம்: ZIP file-ஐ மட்டும் upload செய்ய வேண்டாம். ZIP-ஐ extract செய்து மேலே உள்ள 11 files-ஐ repository root-ல் Replace செய்து Commit changes அழுத்தவும்.
-Commit முடிந்தபின் page header-ல் V29.2 badge தெரிகிறதா சரிபார்க்கவும்.
+Commit முடிந்தபின் page header-ல் V30.0 badge தெரிகிறதா சரிபார்க்கவும்.
 
 Admin URL: https://arunprabaharan52-gif.github.io/Cnc-insert-manager-v21/
 Admin direct URL: https://arunprabaharan52-gif.github.io/Cnc-insert-manager-v21/admin.html

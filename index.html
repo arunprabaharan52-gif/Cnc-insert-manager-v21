@@ -43,16 +43,16 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js"></script>
-<script src="./firebase-config.js?v=29.2"></script>
-<script src="./access-config.js?v=29.2"></script>
-<script src="./access-control.js?v=29.2"></script>
+<script src="./firebase-config.js?v=30.0"></script>
+<script src="./access-config.js?v=30.0"></script>
+<script src="./access-control.js?v=30.0"></script>
 <script>window.CNCAuth.guard('admin');</script>
-<link rel="manifest" href="./manifest.json?v=29.2">
+<link rel="manifest" href="./manifest.json?v=30.0">
 
 </head>
 <body>
 <header>
-  <h1>CNC Insert Manager PRO V23 — Multi-Job <span class="version-badge">V29.2</span></h1>
+  <h1>CNC Insert Manager PRO V23 — Multi-Job <span class="version-badge">V30.0</span></h1>
   <small>Admin Secure Login • 3 Jobs • Multiple Work Sessions • 12-hour AM/PM Time</small>
   <nav>
     <button onclick="showPage('dashboard')">Dashboard</button>
@@ -341,19 +341,47 @@ h2{margin-top:0}.sectiontitle{margin:22px 0 10px}
 <script>
 if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
 const KEY='cnc_insert_manager_pro_v23_complete_v1';
+const OPERATOR_REPORTS_CACHE_KEY='cnc_operator_reports_v30';
 function blankDB(){return {operators:[],inserts:[],entries:[],stockIn:[],notices:[]}}
 function asArray(v){return Array.isArray(v)?v:Object.values(v||{}).filter(Boolean)}
 function normalizeDB(d){
  d=(d&&typeof d==='object')?d:{};
  return {operators:asArray(d.operators),inserts:asArray(d.inserts),entries:asArray(d.entries),stockIn:asArray(d.stockIn),notices:asArray(d.notices)}
 }
-function loadDB(){try{return normalizeDB(JSON.parse(localStorage.getItem(KEY))||blankDB())}catch(e){return blankDB()}}
+function entryIdentity(x){
+ if(x?.sourceId)return 'source:'+String(x.sourceId);
+ if(x?.id!==undefined&&x?.id!==null)return 'id:'+String(x.id);
+ return ''
+}
+function mergeEntries(...groups){
+ const merged=[],positions=new Map();
+ groups.flatMap(asArray).filter(x=>x&&typeof x==='object').forEach(x=>{
+  const key=entryIdentity(x);
+  if(key&&positions.has(key)){const i=positions.get(key);merged[i]={...merged[i],...x}}
+  else{if(key)positions.set(key,merged.length);merged.push(x)}
+ });
+ return merged
+}
+function cachedOperatorReports(){
+ try{return asArray(JSON.parse(localStorage.getItem(OPERATOR_REPORTS_CACHE_KEY))||[])}catch(e){return []}
+}
+function cacheOperatorReports(reports){localStorage.setItem(OPERATOR_REPORTS_CACHE_KEY,JSON.stringify(asArray(reports)))}
+function firebaseSafeKey(value){return String(value||'').replace(/[.#$\/\[\]]/g,'_')}
+function loadDB(){
+ try{const db=normalizeDB(JSON.parse(localStorage.getItem(KEY))||blankDB());db.entries=mergeEntries(db.entries,cachedOperatorReports());return db}
+ catch(e){const db=blankDB();db.entries=cachedOperatorReports();return db}
+}
 function saveDB(db){
   db=normalizeDB(db);
+  db.entries=mergeEntries(cachedOperatorReports(),db.entries);
   localStorage.setItem(KEY,JSON.stringify(db));
   if(window.cloudDBReady && window.cloudDB){
     window.cloudDB.ref('cncManager/db').set(db).catch(e=>console.warn('Cloud save failed',e));
   }
+}
+function saveCanonicalOperatorReport(entry){
+ if(!entry?.sourceId||!window.cloudDBReady||!window.cloudDB)return;
+ window.cloudDB.ref('cncManager/operatorReports/'+firebaseSafeKey(entry.sourceId)).set(entry).catch(e=>console.warn('Operator report cloud update failed',e))
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -644,7 +672,7 @@ function saveEntry(){
   updatedAt:new Date().toISOString()
  };
  if(existingIndex>=0)db.entries[existingIndex]=record;else db.entries.push(record);
- saveDB(db);alert(existingIndex>=0?'Entry updated successfully.':'Entry saved successfully.');clearEntry();refreshAll()
+ saveDB(db);saveCanonicalOperatorReport(record);alert(existingIndex>=0?'Entry updated successfully.':'Entry saved successfully.');clearEntry();refreshAll()
 }
 function clearEntry(){
  eMachine.value=eQuality.value=eReject.value='';
@@ -672,7 +700,16 @@ function editEntry(id){
 }
 function delOperator(code){if(!confirm('இந்த Operator பெயரை delete செய்யவா? பழைய job reports delete ஆகாது.'))return;const db=loadDB();db.operators=db.operators.filter(x=>String(x.code)!==String(code));saveDB(db);if(String(editingOperatorCode)===String(code))resetOperatorForm();refreshAll()}
 function delInsert(code){if(!confirm('Insert master delete செய்யவா?'))return;const db=loadDB();db.inserts=db.inserts.filter(x=>x.code!==code);saveDB(db);refreshAll()}
-function delEntry(id){if(!confirm('இந்த entry delete செய்யவா?'))return;const db=loadDB();db.entries=db.entries.filter(x=>x.id!==id);saveDB(db);refreshAll()}
+function delEntry(id){
+ if(!confirm('இந்த entry delete செய்யவா?'))return;
+ const db=loadDB(),removed=db.entries.find(x=>String(x.id)===String(id));
+ db.entries=db.entries.filter(x=>String(x.id)!==String(id));
+ if(removed?.sourceId){
+  cacheOperatorReports(cachedOperatorReports().filter(x=>String(x.sourceId)!==String(removed.sourceId)));
+  if(window.cloudDBReady&&window.cloudDB)window.cloudDB.ref('cncManager/operatorReports/'+firebaseSafeKey(removed.sourceId)).remove().catch(e=>console.warn('Operator report cloud delete failed',e))
+ }
+ saveDB(db);refreshAll()
+}
 
 function renderOperators(){
  const db=loadDB(),searchBox=document.getElementById('operatorSearch'),q=(searchBox?.value||'').trim().toLowerCase();
@@ -969,8 +1006,12 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
       const numericId=Number(raw.id),id=Number.isFinite(numericId)&&numericId>0?numericId:1700000000000+hash;
       return {...raw,id,sourceId:String(raw.sourceId||('LEGACY-'+keyText)),updatedAt:raw.updatedAt||raw.submittedAt||new Date().toISOString()}
     }
+    function canonicalReports(value){
+      return Object.entries(value||{}).map(([key,raw])=>normalizeOperatorSubmission(raw,key)).filter(Boolean)
+    }
     async function processOperatorSubmission(snap){
       const entry=normalizeOperatorSubmission(snap.val(),snap.key);if(!entry)throw new Error('Invalid pending report');
+      await db.ref('cncManager/operatorReports/'+firebaseSafeKey(entry.sourceId)).set(entry);
       const result=await db.ref('cncManager/db/entries').transaction(raw=>{
         const entries=asArray(raw),i=entries.findIndex(x=>x&&((x.sourceId&&x.sourceId===entry.sourceId)||String(x.id)===String(entry.id)));
         if(i>=0)entries[i]={...entries[i],...entry};else entries.push(entry);
@@ -984,7 +1025,7 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
       pendingSyncRunning=true;setSyncSummary('Pending operator reports checking...');
       try{
         const queue=await db.ref('cncManager/operatorSubmissions').once('value'),items=[];queue.forEach(s=>{items.push(s)});
-        if(!items.length){const entries=await db.ref('cncManager/db/entries').once('value');setSyncSummary(receivedReportSummary(entries.val()),'ok');return}
+        if(!items.length){const entries=await db.ref('cncManager/db/entries').once('value');setSyncSummary(receivedReportSummary(mergeEntries(entries.val(),cachedOperatorReports())),'ok');return}
         setSyncSummary(`${items.length} pending report(s) found — syncing...`,'warn');
         let synced=0,failed=0;for(const snap of items){try{await processOperatorSubmission(snap);synced++}catch(e){failed++;console.error('Pending operator report sync failed',snap.key,e)}}
         const remaining=(await db.ref('cncManager/operatorSubmissions').once('value')).numChildren();
@@ -1018,13 +1059,22 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
     // A dedicated entries listener keeps Operator reports visible immediately,
     // even if another Admin dashboard section fails while rendering.
     db.ref('cncManager/db/entries').on('value',s=>{
-      const local=loadDB();local.entries=asArray(s.val());localStorage.setItem(KEY,JSON.stringify(local));
+      const local=loadDB();local.entries=mergeEntries(asArray(s.val()),cachedOperatorReports());localStorage.setItem(KEY,JSON.stringify(local));
       try{renderEntries()}catch(e){console.error('Live entry table refresh failed',e)}
       try{renderDashboard()}catch(e){console.error('Live dashboard refresh failed',e)}
       try{renderReportAlerts()}catch(e){console.error('Live report alert refresh failed',e)}
       setStatus(`Cloud: LIVE • ${local.entries.length} report(s)`);
       if(!pendingSyncRunning)setSyncSummary(receivedReportSummary(local.entries),'ok')
     },e=>{console.error('Live operator report listener failed',e);setStatus('Cloud: report sync error')});
+
+    // Operator reports use their own durable path. Admin renders this path
+    // directly, so an Admin full-database save cannot erase a submitted report.
+    db.ref('cncManager/operatorReports').on('value',s=>{
+      const reports=canonicalReports(s.val());cacheOperatorReports(reports);
+      const local=loadDB();local.entries=mergeEntries(local.entries,reports);localStorage.setItem(KEY,JSON.stringify(local));
+      refreshAll();setSyncSummary(receivedReportSummary(reports),'ok');
+      setStatus(`Cloud: LIVE • ${reports.length} operator report(s) received`)
+    },e=>{console.error('Durable operator report listener failed',e);setStatus('Cloud: operator report read error')});
 
     
     db.ref('cncManager/settings/reportDeadlines').on('value',s=>{
@@ -1044,7 +1094,7 @@ if(window.CNCAuth&&window.CNCAuth.isAuthorized('admin')){
   }
 
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=29.2',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+    navigator.serviceWorker.register('./service-worker.js?v=30.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
   }
 })();
 }
