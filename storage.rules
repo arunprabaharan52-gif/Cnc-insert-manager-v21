@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function activeUser() {
+      return request.auth != null && request.auth.token.cncActive == true;
+    }
+
+    function activeAdmin() {
+      return activeUser() && request.auth.token.cncRole == 'admin';
+    }
+
+    function activeOperator() {
+      return activeUser() && request.auth.token.cncRole == 'operator';
+    }
+
+    match /cncManager/notices/{noticeId}/{fileName} {
+      allow read: if activeUser();
+      allow create, update: if activeAdmin()
+                            && request.resource.size <= 10 * 1024 * 1024
+                            && request.resource.contentType.matches('^(image/(jpeg|png|webp)|audio/(webm|mpeg|mp4))$')
+                            && request.resource.metadata.noticeId == noticeId
+                            && request.resource.metadata.uploadedBy == request.auth.uid;
+      allow delete: if activeAdmin();
+    }
+
+    match /cncManager/jobScreens/{uid}/{captureId}/{fileName} {
+      allow read: if activeUser() && (request.auth.uid == uid || activeAdmin());
+      allow create: if activeOperator()
+                    && request.auth.uid == uid
+                    && request.resource.size <= 10 * 1024 * 1024
+                    && request.resource.contentType.matches('^image/(jpeg|png|webp)$')
+                    && request.resource.metadata.ownerUid == uid
+                    && request.resource.metadata.captureId == captureId
+                    && request.resource.metadata.uploadedBy == request.auth.uid;
+      allow delete: if activeAdmin() || (activeOperator() && request.auth.uid == uid);
+    }
+
+    match /cncManager/drawings/{drawingId}/{fileName} {
+      allow read: if activeUser();
+      allow create, update: if activeAdmin()
+                            && request.resource.size <= 25 * 1024 * 1024
+                            && request.resource.contentType.matches('^(application/pdf|image/(jpeg|png|webp))$')
+                            && request.resource.metadata.drawingId == drawingId
+                            && request.resource.metadata.uploadedBy == request.auth.uid;
+      allow delete: if activeAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

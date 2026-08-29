@@ -1,12 +1,16 @@
 {
-  "id": "./admin-app-v28",
-  "name": "CNC PRO V23 Admin",
+  "id": "./admin-v37",
+  "name": "CNC Insert Manager V37 Admin",
   "short_name": "CNC Admin",
-  "description": "CNC Insert Manager PRO V23 - Admin Dashboard",
-  "start_url": "./?v=30.0",
+  "description": "Secure drawing-linked CNC jobs, production batches, insert inventory and report administration",
+  "start_url": "./admin.html?v=37.0",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f4f7fb",
-  "theme_color": "#15324b",
-  "version": "30.0"
+  "background_color": "#f3f6fa",
+  "theme_color": "#153f5e",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "shortcuts": [{ "name": "Operator page", "url": "./operator.html" }]
 }

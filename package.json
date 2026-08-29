@@ -1,16 +1,10 @@
 {
-  "name": "cnc-insert-manager-pro-v19",
-  "version": "21.0.0",
+  "name": "cnc-insert-manager-v37",
+  "version": "37.0.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.21.2",
-    "better-sqlite3": "^11.8.1",
-    "node-cron": "^3.0.3",
-    "dotenv": "^16.4.7",
-    "express-session": "^1.18.1",
-    "bcryptjs": "^2.4.3"
+    "test": "node --test tests/*.test.js && npm --prefix functions test",
+    "check": "node --check v31-core.js && node --check access-control.js && node --check admin-app.js && node --check operator-app.js && npm --prefix functions run lint",
+    "audit": "npm --prefix functions audit --package-lock-only --omit=dev"
   }
 }

@@ -1,0 +1,292 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "cncManager": {
+      "users": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+          ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+          ".validate": "newData.hasChildren(['uid','email','displayName','role','active']) && newData.child('uid').val() === $uid && newData.child('email').isString() && newData.child('displayName').isString() && (newData.child('role').val() === 'admin' || newData.child('role').val() === 'operator') && newData.child('active').isBoolean() && (!newData.hasChild('dailySalary') || (newData.child('dailySalary').isNumber() && newData.child('dailySalary').val() >= 0))"
+        }
+      },
+      "roleRequests": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+          ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.child('uid').val() === auth.uid && newData.child('requestedRole').val() === 'operator' && newData.child('status').val() === 'PENDING') || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+          ".validate": "newData.hasChildren(['uid','email','displayName','requestedRole','status']) && newData.child('uid').val() === $uid && newData.child('email').isString() && newData.child('displayName').isString() && newData.child('requestedRole').val() === 'operator' && (newData.child('status').val() === 'PENDING' || newData.child('status').val() === 'APPROVED' || newData.child('status').val() === 'REJECTED')"
+        }
+      },
+      "publicMaster": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "inserts": {
+          ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+          "$sku": {
+            ".validate": "newData.hasChildren(['sku','name','rackId','channelId','issueMode','packSize','edgesPerInsert','expectedPartsPerEdge','unitValue','reorderLevel','active']) && newData.child('sku').isString() && newData.child('name').isString() && newData.child('rackId').isString() && newData.child('channelId').isString() && (newData.child('issueMode').val() === 'ONE_PIECE' || newData.child('issueMode').val() === 'MULTI_PIECE') && newData.child('packSize').isNumber() && newData.child('packSize').val() >= 1 && newData.child('packSize').val() % 1 === 0 && newData.child('edgesPerInsert').isNumber() && newData.child('edgesPerInsert').val() >= 1 && newData.child('edgesPerInsert').val() % 1 === 0 && newData.child('expectedPartsPerEdge').isNumber() && newData.child('expectedPartsPerEdge').val() >= 0 && newData.child('expectedPartsPerEdge').val() % 1 === 0 && newData.child('unitValue').isNumber() && newData.child('unitValue').val() >= 0 && newData.child('reorderLevel').isNumber() && newData.child('reorderLevel').val() >= 0 && newData.child('reorderLevel').val() % 1 === 0 && newData.child('active').isBoolean()"
+          }
+        },
+        "operators": {
+          "$code": {
+            ".validate": "newData.hasChildren(['code','name','shift','active']) && newData.child('code').isString() && newData.child('name').isString() && (newData.child('shift').val() === 'A' || newData.child('shift').val() === 'B') && newData.child('active').isBoolean() && (!newData.hasChild('dailySalary') || (newData.child('dailySalary').isNumber() && newData.child('dailySalary').val() >= 0))"
+          }
+        },
+        "machines": {
+          ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+        },
+        "companies": {
+          "$company": {
+            ".validate": "newData.hasChildren(['companyId','code','name','active']) && newData.child('companyId').val() === $company && newData.child('code').isString() && newData.child('code').val().length >= 2 && newData.child('code').val().length <= 30 && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 120 && newData.child('active').isBoolean()"
+          }
+        },
+        "jobs": {
+          "$job": {
+            ".validate": "newData.hasChildren(['jobMasterId','companyId','companyName','name','partNo','operationCount','operations','totalCustomerRate','active']) && newData.child('jobMasterId').val() === $job && newData.child('companyId').isString() && root.child('cncManager/publicMaster/companies').child(newData.child('companyId').val()).exists() && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('partNo').isString() && newData.child('partNo').val().length > 0 && newData.child('operationCount').isNumber() && newData.child('operationCount').val() >= 1 && newData.child('operationCount').val() <= 4 && newData.child('operationCount').val() % 1 === 0 && newData.child('operations').numChildren() === newData.child('operationCount').val() && newData.child('totalCustomerRate').isNumber() && newData.child('totalCustomerRate').val() >= 0 && newData.child('active').isBoolean()",
+            "operations": {
+              "$operation": {
+                ".validate": "$operation.matches(/^[0-3]$/) && newData.hasChildren(['number','name','machine','cycleMinutes','rpm','customerRate']) && newData.child('number').isNumber() && newData.child('number').val() >= 1 && newData.child('number').val() <= 4 && newData.child('name').isString() && newData.child('machine').val().matches(/^(CNC-[1-5]|VMC-1|VTL-1)$/) && newData.child('cycleMinutes').isNumber() && newData.child('cycleMinutes').val() > 0 && newData.child('rpm').isNumber() && newData.child('rpm').val() >= 1 && newData.child('rpm').val() <= 100000 && newData.child('rpm').val() % 1 === 0 && newData.child('customerRate').isNumber() && newData.child('customerRate').val() >= 0"
+              }
+            }
+          }
+        }
+      },
+      "inventory": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$sku": { ".validate": "newData.hasChild('available') && newData.child('available').isNumber() && newData.child('available').val() >= 0" }
+      },
+      "publicInventory": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$sku": { ".validate": "newData.hasChildren(['sku','available']) && newData.child('sku').isString() && newData.child('available').isNumber() && newData.child('available').val() >= 0" }
+      },
+      "publicMachineState": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$machine": { ".validate": "newData.hasChildren(['machine','state','updatedAt']) && newData.child('machine').val().matches(/^(CNC-[1-5]|VMC-1|VTL-1)$/) && (newData.child('state').val() === 'READY' || newData.child('state').val() === 'LOCKED') && newData.child('updatedAt').isNumber()" }
+      },
+      "stockLedger": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".indexOn": ["sku", "effectiveDate"]
+      },
+      "operatorData": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$uid": {
+          ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+          "reports": {
+            "$date": {
+              ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+            }
+          },
+          "issues": {
+            ".read": "auth != null && ((auth.uid === $uid && root.child('cncManager/users').child(auth.uid).child('role').val() === 'operator' && root.child('cncManager/users').child(auth.uid).child('active').val() === true) || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+            ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+          }
+        }
+      },
+      "operatorReportViews": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": false,
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid && root.child('cncManager/users').child(auth.uid).child('role').val() === 'operator' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+        }
+      },
+      "reportRequests": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$uid": {
+          ".read": "auth != null && ((auth.uid === $uid && root.child('cncManager/users').child(auth.uid).child('active').val() === true) || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+          "$date": {
+            ".write": "auth != null && auth.uid === $uid && root.child('cncManager/users').child(auth.uid).child('role').val() === 'operator' && root.child('cncManager/users').child(auth.uid).child('active').val() === true && newData.exists() && newData.child('status').val() === 'PENDING'",
+            ".validate": "newData.hasChildren(['requestId','requestedAt','date','ownerUid','operatorCode','machine','shift','jobs','dailySalary','status']) && newData.child('requestId').isString() && newData.child('requestId').val().length > 0 && newData.child('requestId').val().length <= 180 && newData.child('requestedAt').isNumber() && newData.child('requestedAt').val() <= now && newData.child('requestedAt').val() >= now - 300000 && newData.child('date').val() === $date && newData.child('date').val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.child('ownerUid').val() === $uid && newData.child('operatorCode').val() === root.child('cncManager/users').child($uid).child('operatorCode').val() && newData.child('machine').val().matches(/^(CNC-[1-5]|VMC-1|VTL-1)$/) && newData.child('shift').val() === root.child('cncManager/users').child($uid).child('shift').val() && newData.child('dailySalary').isNumber() && newData.child('dailySalary').val() === (root.child('cncManager/users').child($uid).hasChild('dailySalary') ? root.child('cncManager/users').child($uid).child('dailySalary').val() : 0) && newData.child('jobs').hasChild('0') && newData.child('jobs').numChildren() <= 3 && newData.child('status').val() === 'PENDING'",
+            "jobs": {
+              "$job": {
+                ".validate": "$job.matches(/^[0-2]$/) && newData.hasChildren(['number','name','partNo','parts','insertUsed','inTime','inPeriod','outTime','outPeriod','cycleMinutes','actual','good','rejected','coolantCount','oilCount','side1Route','side1Complete','side2Route','side2Complete','side3Route','side3Complete','side4Route','side4Complete','activeMinutes','status']) && newData.child('number').isNumber() && newData.child('number').val() >= 1 && newData.child('number').val() <= 3 && newData.child('name').isString() && newData.child('partNo').isString() && newData.child('parts').hasChild('0') && newData.child('parts').numChildren() <= 4 && newData.child('insertUsed').isBoolean() && ((!newData.child('insertUsed').val() && !newData.hasChild('insertUsages')) || (newData.child('insertUsed').val() && newData.child('insertUsages').hasChild('0') && newData.child('insertUsages').numChildren() <= 6)) && newData.child('inTime').isString() && newData.child('inTime').val().matches(/^(0[1-9]|1[0-2]):[0-5][0-9]$/) && (newData.child('inPeriod').val() === 'AM' || newData.child('inPeriod').val() === 'PM') && newData.child('outTime').isString() && newData.child('outTime').val().matches(/^(0[1-9]|1[0-2]):[0-5][0-9]$/) && (newData.child('outPeriod').val() === 'AM' || newData.child('outPeriod').val() === 'PM') && newData.child('cycleMinutes').isNumber() && newData.child('cycleMinutes').val() > 0 && newData.child('actual').isNumber() && newData.child('actual').val() >= 0 && newData.child('actual').val() % 1 === 0 && newData.child('good').isNumber() && newData.child('good').val() >= 0 && newData.child('good').val() % 1 === 0 && newData.child('rejected').isNumber() && newData.child('rejected').val() >= 0 && newData.child('rejected').val() % 1 === 0 && newData.child('good').val() + newData.child('rejected').val() === newData.child('actual').val() && newData.child('coolantCount').isNumber() && newData.child('coolantCount').val() >= 0 && newData.child('coolantCount').val() % 1 === 0 && newData.child('oilCount').isNumber() && newData.child('oilCount').val() >= 0 && newData.child('oilCount').val() % 1 === 0 && newData.child('activeMinutes').isNumber() && newData.child('activeMinutes').val() > 0 && (newData.child('status').val() === 'WORK RUNNING' || newData.child('status').val() === 'JOB COMPLETE') && (newData.child('side1Route').val() !== 'NONE' || newData.child('side2Route').val() !== 'NONE' || newData.child('side3Route').val() !== 'NONE' || newData.child('side4Route').val() !== 'NONE')",
+                "parts": {
+                  "$part": {
+                    ".validate": "$part.matches(/^[0-3]$/) && newData.hasChildren(['number','partNo','machine','side','cycleMinutes','rpm','sideRate']) && newData.child('number').isNumber() && newData.child('number').val() >= 1 && newData.child('number').val() <= 4 && newData.child('partNo').isString() && newData.child('partNo').val().length > 0 && newData.child('partNo').val().length <= 100 && newData.child('machine').val().matches(/^(CNC-[1-5]|VMC-1|VTL-1)$/) && newData.child('side').val().matches(/^SIDE-[1-4]$/) && newData.child('cycleMinutes').isNumber() && newData.child('cycleMinutes').val() > 0 && newData.child('rpm').isNumber() && newData.child('rpm').val() >= 1 && newData.child('rpm').val() <= 100000 && newData.child('rpm').val() % 1 === 0 && newData.child('sideRate').isNumber() && newData.child('sideRate').val() >= 0 && (!newData.hasChild('programNo') || (newData.child('programNo').isString() && newData.child('programNo').val().length <= 80))",
+                    "screenCapture": { ".validate": "newData.hasChildren(['captureId','storagePath','status','confirmed']) && newData.child('captureId').isString() && newData.child('storagePath').isString() && newData.child('storagePath').val().matches(/^cncManager\\/jobScreens\\/.+$/) && (newData.child('status').val() === 'COMPLETE' || newData.child('status').val() === 'NEEDS_REVIEW') && newData.child('confirmed').val() === true" }
+                  }
+                },
+                "workMachine": { ".validate": "newData.isString() && newData.val().matches(/^(CNC-[1-5]|VMC-1|VTL-1)$/)" },
+                "insertUsages": {
+                  "$slot": { ".validate": "$slot.matches(/^[0-5]$/) && newData.hasChildren(['slot','issueId','sku']) && newData.child('slot').isNumber() && newData.child('slot').val() >= 1 && newData.child('slot').val() <= 6 && newData.child('issueId').isString() && newData.child('issueId').val().length > 0 && newData.child('issueId').val().length <= 180 && newData.child('sku').isString() && newData.child('sku').val().length > 0 && newData.child('sku').val().length <= 80" }
+                },
+                "side1Route": { ".validate": "newData.isString() && newData.val().matches(/^(NONE|CNC|VMC|VTL|CNC_VMC|CNC_VTL|VMC_VTL|CNC_VMC_VTL)$/)" },
+                "side2Route": { ".validate": "newData.isString() && newData.val().matches(/^(NONE|CNC|VMC|VTL|CNC_VMC|CNC_VTL|VMC_VTL|CNC_VMC_VTL)$/)" },
+                "side3Route": { ".validate": "newData.isString() && newData.val().matches(/^(NONE|CNC|VMC|VTL|CNC_VMC|CNC_VTL|VMC_VTL|CNC_VMC_VTL)$/)" },
+                "side4Route": { ".validate": "newData.isString() && newData.val().matches(/^(NONE|CNC|VMC|VTL|CNC_VMC|CNC_VTL|VMC_VTL|CNC_VMC_VTL)$/)" },
+                "side1Complete": { ".validate": "newData.isBoolean()" },
+                "side2Complete": { ".validate": "newData.isBoolean()" },
+                "side3Complete": { ".validate": "newData.isBoolean()" },
+                "side4Complete": { ".validate": "newData.isBoolean()" }
+              }
+            }
+          }
+        }
+      },
+      "screenOcrRequests": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$uid": {
+          ".read": "auth != null && ((auth.uid === $uid && root.child('cncManager/users').child(auth.uid).child('role').val() === 'operator' && root.child('cncManager/users').child(auth.uid).child('active').val() === true) || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+          "$capture": {
+            ".write": "auth != null && ((auth.uid === $uid && !data.exists() && root.child('cncManager/users').child(auth.uid).child('role').val() === 'operator' && root.child('cncManager/users').child(auth.uid).child('active').val() === true) || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+            ".validate": "newData.hasChildren(['captureId','ownerUid','storagePath','reportDate','jobNumber','partNumber','status','requestedAt']) && newData.child('captureId').val() === $capture && newData.child('ownerUid').val() === $uid && newData.child('storagePath').isString() && newData.child('storagePath').val().matches(/^cncManager\\/jobScreens\\/.+$/) && newData.child('reportDate').isString() && newData.child('reportDate').val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.child('jobNumber').isNumber() && newData.child('jobNumber').val() >= 1 && newData.child('jobNumber').val() <= 3 && newData.child('partNumber').isNumber() && newData.child('partNumber').val() >= 1 && newData.child('partNumber').val() <= 4 && newData.child('status').val() === 'PENDING' && newData.child('requestedAt').isNumber() && newData.child('requestedAt').val() <= now && newData.child('requestedAt').val() >= now - 300000"
+          }
+        }
+      },
+      "issueRequests": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$uid": {
+          ".read": "auth != null && ((auth.uid === $uid && root.child('cncManager/users').child(auth.uid).child('active').val() === true) || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+          "$request": {
+            ".write": "auth != null && ((auth.uid === $uid && !data.exists() && root.child('cncManager/users').child(auth.uid).child('role').val() === 'operator' && root.child('cncManager/users').child(auth.uid).child('active').val() === true) || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+            ".validate": "newData.hasChildren(['requestId','ownerUid','operatorCode','sku','machine','job','partNo','quantity','status']) && newData.child('requestId').val() === $request && newData.child('ownerUid').val() === $uid && newData.child('operatorCode').val() === root.child('cncManager/users').child($uid).child('operatorCode').val() && newData.child('sku').isString() && newData.child('machine').val().matches(/^(CNC-[1-5]|VMC-1|VTL-1)$/) && newData.child('job').isString() && newData.child('partNo').isString() && newData.child('quantity').isNumber() && newData.child('quantity').val() >= 1 && newData.child('quantity').val() <= 100 && newData.child('quantity').val() % 1 === 0 && (!newData.hasChild('exceptionCode') || newData.child('exceptionCode').val() === '' || newData.child('exceptionCode').val() === 'FIRST_SETUP') && (newData.child('exceptionCode').val() !== 'FIRST_SETUP' || (newData.child('exceptionNote').isString() && newData.child('exceptionNote').val().length > 0)) && newData.child('status').val() === 'PENDING'"
+          }
+        }
+      },
+      "returnRequests": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$uid": {
+          ".read": "auth != null && ((auth.uid === $uid && root.child('cncManager/users').child(auth.uid).child('active').val() === true) || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+          "$request": {
+            ".write": "auth != null && ((auth.uid === $uid && !data.exists() && root.child('cncManager/users').child(auth.uid).child('role').val() === 'operator' && root.child('cncManager/users').child(auth.uid).child('active').val() === true) || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+            ".validate": "newData.hasChildren(['requestId','issueId','ownerUid','operatorCode','action','physicalReturnConfirmed','unusedQty','goodParts','rejectedParts','cuttingMinutes','edgesUsed','status']) && newData.child('requestId').val() === $request && newData.child('ownerUid').val() === $uid && newData.child('operatorCode').val() === root.child('cncManager/users').child($uid).child('operatorCode').val() && (newData.child('action').val() === 'INDEX' || newData.child('action').val() === 'REPLACE' || newData.child('action').val() === 'PART_USED_RETURN' || newData.child('action').val() === 'SCRAP_RETURN') && newData.child('physicalReturnConfirmed').isBoolean() && newData.child('unusedQty').isNumber() && newData.child('unusedQty').val() >= 0 && newData.child('unusedQty').val() % 1 === 0 && newData.child('goodParts').isNumber() && newData.child('goodParts').val() >= 0 && newData.child('goodParts').val() % 1 === 0 && newData.child('rejectedParts').isNumber() && newData.child('rejectedParts').val() >= 0 && newData.child('rejectedParts').val() % 1 === 0 && newData.child('cuttingMinutes').isNumber() && newData.child('cuttingMinutes').val() >= 0 && newData.child('edgesUsed').isNumber() && newData.child('edgesUsed').val() >= 1 && newData.child('edgesUsed').val() % 1 === 0 && (newData.child('action').val() !== 'INDEX' || newData.child('edgesUsed').val() === 1) && (!newData.hasChild('exceptionCode') || newData.child('exceptionCode').val() === '' || newData.child('exceptionCode').val().matches(/^(FIRST_SETUP|BROKEN_PIECES|LOST|WRONG_ISSUE|TRIAL)$/)) && (!newData.hasChild('exceptionCode') || newData.child('exceptionCode').val() === '' || (newData.child('exceptionNote').isString() && newData.child('exceptionNote').val().length > 0)) && (newData.child('action').val() !== 'INDEX' || !newData.hasChild('exceptionCode') || newData.child('exceptionCode').val() === '') && newData.child('status').val() === 'PENDING'"
+          }
+        }
+      },
+      "issues": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$issue": {
+          ".read": "auth != null && ((data.child('ownerUid').val() === auth.uid && root.child('cncManager/users').child(auth.uid).child('active').val() === true) || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+          ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+        },
+        ".indexOn": ["ownerUid", "status", "issuedAt"]
+      },
+      "approvals": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".indexOn": ["status", "ownerUid"]
+      },
+      "returnSensorEvents": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+      },
+      "dispenseQueue": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".indexOn": ["status", "createdAt"]
+      },
+      "openIssueSlots": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+      },
+      "machineHistory": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+      },
+      "stockRequests": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$request": {
+          ".write": "auth != null && !data.exists() && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+          ".validate": "newData.hasChildren(['requestId','sku','type','delta','effectiveDate','reason','status','requestedBy']) && newData.child('requestId').val() === $request && newData.child('sku').isString() && (newData.child('type').val() === 'RECEIPT' || newData.child('type').val() === 'ADJUSTMENT') && newData.child('delta').isNumber() && newData.child('delta').val() !== 0 && newData.child('delta').val() % 1 === 0 && (newData.child('type').val() !== 'RECEIPT' || newData.child('delta').val() > 0) && newData.child('effectiveDate').isString() && newData.child('effectiveDate').val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.child('reason').isString() && newData.child('reason').val().length > 0 && newData.child('reason').val().length <= 200 && newData.child('status').val() === 'PENDING' && newData.child('requestedBy').val() === auth.uid"
+        }
+      },
+      "publicNotices": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+      },
+      "drawings": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$drawing": {
+          ".validate": "newData.hasChildren(['drawingId','companyId','companyName','originalName','contentType','size','storagePath','analysisStatus','confirmed','uploadedBy','uploadedAt']) && newData.child('drawingId').val() === $drawing && newData.child('companyId').isString() && root.child('cncManager/publicMaster/companies').child(newData.child('companyId').val()).exists() && newData.child('storagePath').isString() && newData.child('storagePath').val().matches(/^cncManager\\/drawings\\/.+$/) && (newData.child('contentType').val() === 'application/pdf' || newData.child('contentType').val().matches(/^image\\/(jpeg|png|webp)$/)) && newData.child('size').isNumber() && newData.child('size').val() > 0 && newData.child('size').val() <= 26214400 && newData.child('confirmed').isBoolean()"
+        }
+      },
+      "drawingAnalysisRequests": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$drawing": {
+          ".write": "auth != null && !data.exists() && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+          ".validate": "newData.hasChildren(['drawingId','companyId','ownerUid','storagePath','contentType','status','requestedAt']) && newData.child('drawingId').val() === $drawing && newData.child('ownerUid').val() === auth.uid && newData.child('storagePath').isString() && newData.child('storagePath').val().matches(/^cncManager\\/drawings\\/.+$/) && newData.child('status').val() === 'PENDING' && newData.child('requestedAt').isNumber() && newData.child('requestedAt').val() <= now && newData.child('requestedAt').val() >= now - 300000"
+        }
+      },
+      "productionBatches": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".indexOn": ["companyId", "jobMasterId", "status", "createdAt"]
+      },
+      "jobEstimates": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".indexOn": ["companyId", "jobMasterId", "poNumber", "createdAt"]
+      },
+      "operatorAssignments": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": false,
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid && root.child('cncManager/users').child(auth.uid).child('role').val() === 'operator' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+        }
+      },
+      "batchUpdateRequests": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "$uid": {
+          ".read": "auth != null && ((auth.uid === $uid && root.child('cncManager/users').child(auth.uid).child('active').val() === true) || (root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true))",
+          "$request": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('cncManager/users').child(auth.uid).child('role').val() === 'operator' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+            ".validate": "newData.hasChildren(['requestId','batchId','operationNumber','action','ownerUid','operatorCode','status','requestedAt']) && newData.child('requestId').val() === $request && newData.child('ownerUid').val() === $uid && newData.child('operatorCode').val() === root.child('cncManager/users').child($uid).child('operatorCode').val() && newData.child('batchId').isString() && root.child('cncManager/productionBatches').child(newData.child('batchId').val()).exists() && root.child('cncManager/productionBatches').child(newData.child('batchId').val()).child('assignedOperatorUid').val() === $uid && newData.child('operationNumber').isNumber() && newData.child('operationNumber').val() >= 1 && newData.child('operationNumber').val() <= 4 && newData.child('operationNumber').val() % 1 === 0 && (newData.child('action').val() === 'START' || (newData.child('action').val() === 'COMPLETE' && newData.child('completedQty').isNumber() && newData.child('completedQty').val() >= 1 && newData.child('completedQty').val() % 1 === 0 && newData.child('actualCycleMinutes').isNumber() && newData.child('actualCycleMinutes').val() > 0)) && newData.child('status').val() === 'PENDING' && newData.child('requestedAt').isNumber() && newData.child('requestedAt').val() <= now && newData.child('requestedAt').val() >= now - 300000"
+          }
+        }
+      },
+      "productionBatchEvents": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+      },
+      "settings": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        "machineRates": {
+          "$machine": {
+            ".validate": "$machine.matches(/^(CNC-[1-5]|VMC-1|VTL-1)$/) && newData.hasChildren(['machine','minPerMinute','maxPerMinute']) && newData.child('machine').val() === $machine && newData.child('minPerMinute').isNumber() && newData.child('minPerMinute').val() >= 0 && newData.child('maxPerMinute').isNumber() && newData.child('maxPerMinute').val() >= newData.child('minPerMinute').val() && ((newData.child('minPerMinute').val() === 0 && newData.child('maxPerMinute').val() === 0) || (newData.child('minPerMinute').val() > 0 && newData.child('maxPerMinute').val() > 0))"
+          }
+        },
+        "companyProfile": {
+          ".validate": "newData.hasChildren(['companyName','monthlyTargetRevenue']) && newData.child('companyName').isString() && newData.child('companyName').val().length > 0 && newData.child('companyName').val().length <= 120 && newData.child('monthlyTargetRevenue').isNumber() && newData.child('monthlyTargetRevenue').val() >= 0 && (!newData.hasChild('legalName') || (newData.child('legalName').isString() && newData.child('legalName').val().length <= 160)) && (!newData.hasChild('gstin') || (newData.child('gstin').isString() && newData.child('gstin').val().length <= 20)) && (!newData.hasChild('establishedDate') || (newData.child('establishedDate').isString() && (newData.child('establishedDate').val() === '' || newData.child('establishedDate').val().matches(/^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[0-1])$/)))) && (!newData.hasChild('contactPerson') || (newData.child('contactPerson').isString() && newData.child('contactPerson').val().length <= 120)) && (!newData.hasChild('phone') || (newData.child('phone').isString() && newData.child('phone').val().length <= 30)) && (!newData.hasChild('email') || (newData.child('email').isString() && newData.child('email').val().length <= 160)) && (!newData.hasChild('address') || (newData.child('address').isString() && newData.child('address').val().length <= 500))"
+        },
+        "monthlyTurnover": {
+          "$month": {
+            ".validate": "$month.matches(/^[0-9]{4}-(0[1-9]|1[0-2])$/) && newData.hasChildren(['month','turnover','target']) && newData.child('month').val() === $month && newData.child('turnover').isNumber() && newData.child('turnover').val() >= 0 && newData.child('target').isNumber() && newData.child('target').val() >= 0 && (!newData.hasChild('note') || (newData.child('note').isString() && newData.child('note').val().length <= 200))"
+          }
+        }
+      },
+      "audit": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+      },
+      "legacyReports": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+      },
+      "meta": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true"
+      },
+      "db": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": false
+      },
+      "operatorReports": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": false
+      },
+      "operatorSubmissions": {
+        ".read": "auth != null && root.child('cncManager/users').child(auth.uid).child('role').val() === 'admin' && root.child('cncManager/users').child(auth.uid).child('active').val() === true",
+        ".write": false
+      },
+      "$other": { ".read": false, ".write": false }
+    }
+  }
+}
