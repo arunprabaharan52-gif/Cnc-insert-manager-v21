@@ -1,4 +1,4 @@
-const CACHE = 'cnc-insert-manager-v37-20260829-production';
+const CACHE = 'cnc-insert-manager-v37-1-20260915-admin-auth-fix';
 const CORE = ['./', './index.html', './admin.html', './operator.html', './app.css', './v31-core.js', './access-control.js', './firebase-config.js', './admin-app.js', './operator-app.js', './manifest.json', './operator-manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {

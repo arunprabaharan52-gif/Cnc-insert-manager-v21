@@ -471,7 +471,7 @@
     if (!context.profile.operatorCode) { setStatus($('globalStatus'), 'இந்த account-க்கு Operator Code mapping இல்லை. Admin-ஐ தொடர்பு கொள்ளவும்.', 'error'); document.querySelectorAll('form button[type=submit]').forEach(button => { button.disabled = true; }); return; }
     $('operatorIdentity').textContent = context.profile.displayName || context.user.displayName || context.user.email; $('operatorCodeLabel').textContent = `${context.profile.operatorCode} · Shift ${context.profile.shift || 'A'}`;
     setupForms(); setupListeners();
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js?v=37.0', { updateViaCache: 'none' }).then(registration => registration.update()).catch(console.warn);
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js?v=37.1', { updateViaCache: 'none' }).then(registration => registration.update()).catch(console.warn);
   }
 
   if (!C || !globalThis.CNCAuth) throw new Error('V37 core/auth scripts failed to load.');

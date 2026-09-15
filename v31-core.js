@@ -5,7 +5,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '37.0';
+  const VERSION = '37.1';
   const ISSUE_MODES = Object.freeze(['ONE_PIECE', 'MULTI_PIECE']);
   const RETURN_ACTIONS = Object.freeze(['INDEX', 'REPLACE', 'PART_USED_RETURN', 'SCRAP_RETURN']);
   const EXCEPTION_CODES = Object.freeze(['FIRST_SETUP', 'BROKEN_PIECES', 'LOST', 'WRONG_ISSUE', 'TRIAL']);

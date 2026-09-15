@@ -89,8 +89,26 @@
   }
 
   async function profileFor(user) {
+    // Wait until Firebase Auth has a usable ID token before asking Realtime
+    // Database to evaluate auth-based rules for this user.
+    await user.getIdToken();
     const snapshot = await databaseInstance.ref(`cncManager/users/${user.uid}`).once('value');
     return snapshot.exists() ? snapshot.val() : null;
+  }
+
+  function normalizedRole(profile) {
+    return String(profile?.role || '').trim().toLowerCase();
+  }
+
+  function hasRequiredRole(profile, requiredRole) {
+    return profile?.active === true && normalizedRole(profile) === requiredRole;
+  }
+
+  function deniedReason(profile, requiredRole) {
+    if (!profile) return `இந்த account-க்கு ${requiredRole} profile இல்லை.`;
+    if (profile.active !== true) return 'இந்த account deactivate செய்யப்பட்டுள்ளது.';
+    const assignedRole = normalizedRole(profile) || 'set செய்யப்படவில்லை';
+    return `இந்த account role ${assignedRole}; ${requiredRole} access இல்லை.`;
   }
 
   function renderGate(requiredRole, reason = '') {
@@ -145,8 +163,8 @@
       if (!email || pass.length < 8) return setStatus('சரியான email மற்றும் குறைந்தது 8-character password கொடுக்கவும்.');
       setBusy(true); setStatus('');
       try {
-        suppressAuthObserver = true;
         if (signupMode) {
+          suppressAuthObserver = true;
           const name = root.querySelector('#cncDisplayName').value.trim();
           if (!name) throw new Error('Full name is required.');
           const credential = await authInstance.createUserWithEmailAndPassword(email, pass);
@@ -162,7 +180,7 @@
           renderGate(requiredRole, pendingGateReason); pendingGateReason = '';
         } else {
           await authInstance.signInWithEmailAndPassword(email, pass);
-          location.reload();
+          // onAuthStateChanged is the single source of truth for access checks.
         }
       } catch (error) {
         await authInstance.signOut().catch(() => {});
@@ -176,19 +194,12 @@
     root.querySelector('#cncGoogle').addEventListener('click', async () => {
       setBusy(true); setStatus('');
       try {
-        suppressAuthObserver = true;
         const credential = await authInstance.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-        const profile = await profileFor(credential.user);
-        if (!profile?.role) {
-          await requestAccess(credential.user, credential.user.displayName);
-          pendingGateReason = 'Google account பதிவு செய்யப்பட்டது. Admin approval பிறகு login செய்யவும்.';
-          await authInstance.signOut();
-          suppressAuthObserver = false;
-          renderGate(requiredRole, pendingGateReason); pendingGateReason = '';
-        } else location.reload();
+        await credential.user.getIdToken();
+        // The auth observer below completes the role check. Reading the
+        // database here caused a race between popup completion and Auth state.
       } catch (error) {
         await authInstance.signOut().catch(() => {});
-        suppressAuthObserver = false;
         setStatus(friendlyError(error));
       } finally {
         setBusy(false);
@@ -225,10 +236,15 @@
           showLoading('Role and account status checking…');
           try {
             const profile = await profileFor(user);
-            if (!profile?.active || profile.role !== requiredRole) {
+            if (!hasRequiredRole(profile, requiredRole)) {
               const requestSnapshot = await databaseInstance.ref(`cncManager/roleRequests/${user.uid}`).once('value').catch(() => null);
-              const pending = requestSnapshot?.val()?.status === 'PENDING';
-              pendingGateReason = pending ? 'உங்கள் access request இன்னும் Admin approval-ல் உள்ளது.' : `இந்த account-க்கு ${requiredRole} access இல்லை.`;
+              let pending = requestSnapshot?.val()?.status === 'PENDING';
+              const signedInWithGoogle = user.providerData.some(item => item.providerId === 'google.com');
+              if (!profile && requiredRole === 'operator' && signedInWithGoogle && !requestSnapshot?.exists()) {
+                await requestAccess(user, user.displayName);
+                pending = true;
+              }
+              pendingGateReason = pending ? 'உங்கள் access request இன்னும் Admin approval-ல் உள்ளது.' : deniedReason(profile, requiredRole);
               await authInstance.signOut();
               return;
             }
@@ -240,14 +256,14 @@
             }
             await user.getIdToken(true).catch(error => console.warn('Role-claim token refresh skipped', error));
             activeProfile = profile;
-            activeRole = profile.role;
+            activeRole = normalizedRole(profile);
             document.getElementById('cncAuthRoot')?.remove();
             document.body.classList.remove('cnc-auth-pending');
             await onReady({ user, profile, auth: authInstance, db: databaseInstance });
             const baselineProfile = JSON.stringify(profile);
             databaseInstance.ref(`cncManager/users/${user.uid}`).on('value', async snapshot => {
               const current = snapshot.val();
-              if (!current?.active || current.role !== requiredRole) {
+              if (!hasRequiredRole(current, requiredRole)) {
                 pendingGateReason = 'இந்த account deactivate செய்யப்பட்டது அல்லது role மாற்றப்பட்டது.';
                 await authInstance.signOut().catch(() => {}); location.reload(); return;
               }

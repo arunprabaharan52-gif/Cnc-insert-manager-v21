@@ -3,7 +3,7 @@
   "name": "CNC Insert Manager V37 Admin",
   "short_name": "CNC Admin",
   "description": "Secure drawing-linked CNC jobs, production batches, insert inventory and report administration",
-  "start_url": "./admin.html?v=37.0",
+  "start_url": "./admin.html?v=37.1",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f3f6fa",

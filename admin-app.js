@@ -932,7 +932,7 @@
     state.db = context.db; state.storage = firebase.storage(); state.user = context.user; state.profile = context.profile;
     $('signedUser').textContent = `${context.profile.displayName || context.user.email} · Admin`;
     setupNavigation(); setupForms(); setupListeners();
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js?v=37.0', { updateViaCache: 'none' }).then(registration => registration.update()).catch(console.warn);
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js?v=37.1', { updateViaCache: 'none' }).then(registration => registration.update()).catch(console.warn);
   }
 
   if (!C || !globalThis.CNCAuth) throw new Error('V37 core/auth scripts failed to load.');
