@@ -109,12 +109,11 @@
     return String(value || '').trim().toLowerCase();
   }
 
-  function isOwnerAdmin(user, profile) {
+  function isOwnerAdmin(user) {
+    // Firebase Auth UID is the immutable identity boundary. This recovery path
+    // is available only to the owner's exact signed-in account.
     return user?.uid === OWNER_ADMIN.uid
-      && normalizedEmail(user?.email) === OWNER_ADMIN.email
-      && profile?.uid === OWNER_ADMIN.uid
-      && normalizedEmail(profile?.email) === OWNER_ADMIN.email
-      && normalizedRole(profile) === 'admin';
+      && normalizedEmail(user?.email) === OWNER_ADMIN.email;
   }
 
   function isActiveProfile(profile) {
@@ -125,10 +124,10 @@
   }
 
   function hasRequiredRole(profile, requiredRole, user = null) {
-    // Owner recovery remains locked to the exact Firebase Auth UID, email and
-    // matching database profile. It prevents a malformed legacy active field
-    // from locking the verified owner out without weakening operator access.
-    if (requiredRole === 'admin' && isOwnerAdmin(user, profile)) return true;
+    // Owner recovery remains locked to the exact Firebase Auth UID and email.
+    // It prevents a malformed legacy active field from locking the verified
+    // owner out without weakening operator access.
+    if (requiredRole === 'admin' && isOwnerAdmin(user)) return true;
     return isActiveProfile(profile) && normalizedRole(profile) === requiredRole;
   }
 
