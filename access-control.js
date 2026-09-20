@@ -1,6 +1,11 @@
 (function () {
   'use strict';
 
+  const OWNER_ADMIN = Object.freeze({
+    uid: 'CRjs8t8LP9Yp0uAy2aInanVrrfB2',
+    email: 'arunprabaharan52@gmail.com'
+  });
+
   let authInstance = null;
   let databaseInstance = null;
   let activeProfile = null;
@@ -100,6 +105,18 @@
     return String(profile?.role || '').trim().toLowerCase();
   }
 
+  function normalizedEmail(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function isOwnerAdmin(user, profile) {
+    return user?.uid === OWNER_ADMIN.uid
+      && normalizedEmail(user?.email) === OWNER_ADMIN.email
+      && profile?.uid === OWNER_ADMIN.uid
+      && normalizedEmail(profile?.email) === OWNER_ADMIN.email
+      && normalizedRole(profile) === 'admin';
+  }
+
   function isActiveProfile(profile) {
     // Older Firebase Console entries may contain the text "true" instead of
     // the Boolean true. Accept both during login so a legacy type mistake does
@@ -107,7 +124,11 @@
     return profile?.active === true || String(profile?.active || '').trim().toLowerCase() === 'true';
   }
 
-  function hasRequiredRole(profile, requiredRole) {
+  function hasRequiredRole(profile, requiredRole, user = null) {
+    // Owner recovery remains locked to the exact Firebase Auth UID, email and
+    // matching database profile. It prevents a malformed legacy active field
+    // from locking the verified owner out without weakening operator access.
+    if (requiredRole === 'admin' && isOwnerAdmin(user, profile)) return true;
     return isActiveProfile(profile) && normalizedRole(profile) === requiredRole;
   }
 
@@ -250,7 +271,7 @@
           showLoading('Role and account status checking…');
           try {
             const profile = await profileFor(user);
-            if (!hasRequiredRole(profile, requiredRole)) {
+            if (!hasRequiredRole(profile, requiredRole, user)) {
               const requestSnapshot = await databaseInstance.ref(`cncManager/roleRequests/${user.uid}`).once('value').catch(() => null);
               let pending = requestSnapshot?.val()?.status === 'PENDING';
               const signedInWithGoogle = user.providerData.some(item => item.providerId === 'google.com');
@@ -281,7 +302,7 @@
             const baselineProfile = JSON.stringify(profile);
             databaseInstance.ref(`cncManager/users/${user.uid}`).on('value', async snapshot => {
               const current = snapshot.val();
-              if (!hasRequiredRole(current, requiredRole)) {
+              if (!hasRequiredRole(current, requiredRole, user)) {
                 pendingGateReason = 'இந்த account deactivate செய்யப்பட்டது அல்லது role மாற்றப்பட்டது.';
                 await authInstance.signOut().catch(() => {}); location.reload(); return;
               }
