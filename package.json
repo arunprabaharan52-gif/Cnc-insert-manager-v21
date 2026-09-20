@@ -1,6 +1,6 @@
 {
   "name": "cnc-insert-manager-v37",
-  "version": "37.1.0",
+  "version": "37.2.0",
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.js && npm --prefix functions test",

@@ -100,13 +100,20 @@
     return String(profile?.role || '').trim().toLowerCase();
   }
 
+  function isActiveProfile(profile) {
+    // Older Firebase Console entries may contain the text "true" instead of
+    // the Boolean true. Accept both during login so a legacy type mistake does
+    // not lock the assigned user out of the app.
+    return profile?.active === true || String(profile?.active || '').trim().toLowerCase() === 'true';
+  }
+
   function hasRequiredRole(profile, requiredRole) {
-    return profile?.active === true && normalizedRole(profile) === requiredRole;
+    return isActiveProfile(profile) && normalizedRole(profile) === requiredRole;
   }
 
   function deniedReason(profile, requiredRole) {
     if (!profile) return `இந்த account-க்கு ${requiredRole} profile இல்லை.`;
-    if (profile.active !== true) return 'இந்த account deactivate செய்யப்பட்டுள்ளது.';
+    if (!isActiveProfile(profile)) return 'இந்த account deactivate செய்யப்பட்டுள்ளது.';
     const assignedRole = normalizedRole(profile) || 'set செய்யப்படவில்லை';
     return `இந்த account role ${assignedRole}; ${requiredRole} access இல்லை.`;
   }
@@ -138,11 +145,18 @@
     const password = root.querySelector('#cncPassword');
     let signupMode = false;
     const setBusy = busy => {
-      submit.disabled = busy;
-      root.querySelector('#cncGoogle').disabled = busy;
-      submit.textContent = busy ? 'Please wait…' : (signupMode ? 'Create access request' : 'Login');
+      // The auth observer can redraw this gate while a login promise is still
+      // finishing. Guard detached controls so a successful sign-in cannot end
+      // with "Cannot set properties of null".
+      if (submit?.isConnected) {
+        submit.disabled = busy;
+        submit.textContent = busy ? 'Please wait…' : (signupMode ? 'Create access request' : 'Login');
+      }
+      const google = root.querySelector('#cncGoogle');
+      if (google) google.disabled = busy;
     };
     const setStatus = (message, ok = false) => {
+      if (!status?.isConnected) return;
       status.textContent = message;
       status.classList.toggle('ok', ok);
     };
@@ -248,7 +262,11 @@
               await authInstance.signOut();
               return;
             }
-            if (!user.emailVerified && user.providerData.some(item => item.providerId === 'password')) {
+            // An existing active Admin profile is the authority for Admin
+            // access. Keep email verification mandatory for new operators,
+            // but do not lock the assigned Admin out when Firebase mail is
+            // delayed or unavailable.
+            if (requiredRole !== 'admin' && !user.emailVerified && user.providerData.some(item => item.providerId === 'password')) {
               await user.sendEmailVerification().catch(() => {});
               pendingGateReason = 'Email verify செய்யப்படவில்லை. புதிய verification email அனுப்பப்பட்டுள்ளது.';
               await authInstance.signOut();

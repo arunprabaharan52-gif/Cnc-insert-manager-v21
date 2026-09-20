@@ -3,7 +3,7 @@
   "name": "CNC Insert Manager V37 Operator",
   "short_name": "CNC Operator",
   "description": "Secure production batch, Head/Side progress, screen OCR, insert edge and daily report workflow",
-  "start_url": "./operator.html?v=37.1",
+  "start_url": "./operator.html?v=37.2",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f3f6fa",
